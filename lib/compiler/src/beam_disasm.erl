@@ -40,6 +40,7 @@
 
 -type index()        :: non_neg_integer().
 -type literals()     :: 'none' | gb_trees:tree(index(), term()).
+-type lines()        :: #{non_neg_integer() => {location, string(), non_neg_integer()}}.
 -type symbolic_tag() :: 'a' | 'f' | 'h' | 'i' | 'u' | 'x' | 'y' | 'z'.
 -type disasm_tag()   :: symbolic_tag() | 'fr' | 'atom' | 'float' | 'literal'.
 -type disasm_term()  :: 'nil' | {disasm_tag(), _}.
@@ -182,8 +183,10 @@ process_chunks(F) ->
 	    Lambdas = beam_disasm_lambdas(LambdaBin, Atoms),
 	    LiteralBin = optional_chunk(F, "LitT"),
 	    Literals = beam_disasm_literals(LiteralBin),
+	    LineBin = optional_chunk(F, "Line"),
+	    Lines = beam_disasm_lines(LineBin, Module),
 	    Code = beam_disasm_code(CodeBin, Atoms, mk_imports(ImportsList),
-				    StrBin, Lambdas, Literals, Module),
+				    StrBin, Lambdas, Literals, Lines, Module),
 	    Attributes =
 		case optional_chunk(F, attributes) of
 		    none -> [];
@@ -247,6 +250,53 @@ disasm_literals(<<Sz:32,Ext:Sz/binary,T/binary>>, Index) ->
 disasm_literals(<<>>, _) -> [].
 
 %%-----------------------------------------------------------------------
+%% Disassembles the location table ('Line') of a BEAM file.
+%%-----------------------------------------------------------------------
+
+-spec beam_disasm_lines(binary() | none, module()) -> lines().
+
+beam_disasm_lines(none, _) -> #{};
+beam_disasm_lines(<<Version:32,Tab/binary>>, Module) ->
+    case Version of
+	0 -> disasm_lines(Tab, Module);
+	_ -> #{} %% Wrong version
+    end.
+
+disasm_lines(<<_Flags:32, _NumLineInstrs:32, NumLineItems:32, NumFNames:32,
+	       Rest0/binary>>, Module) ->
+    {LineItems, Rest1}
+	= disasm_line_items(NumLineItems, binary_to_list(Rest0), 0, []),
+    true = lists:all(fun({F,_}) -> F =< NumFNames end, LineItems),
+    DefaultFile = atom_to_list(Module) ++ ".erl",
+    Files = disasm_line_files(NumFNames, list_to_binary(Rest1),
+			      #{0 => DefaultFile}),
+    lines_collect_items(LineItems, Files, #{}).
+
+lines_collect_items([], _, Acc) -> Acc;
+lines_collect_items([{FileNo, LineNo}|Rest], Files, Acc) ->
+    #{FileNo := File} = Files,
+    lines_collect_items(
+      Rest, Files, Acc#{map_size(Acc)+1 => {location, File, LineNo}}).
+
+disasm_line_items(0, Rest, _, Acc) -> {lists:reverse(Acc), Rest};
+disasm_line_items(N, [B|Bs0], FileNo, Acc) when N > 0 ->
+    Tag = decode_tag(B band 2#111),
+    ?NO_DEBUG('Tag = ~p, B = ~p, Bs = ~P~n', [Tag, B, Bs, 20]),
+    case Tag of
+	a ->
+	    {{a, NewFileNo}, Bs} = decode_int(Tag, B, Bs0),
+	    disasm_line_items(N, Bs, NewFileNo, Acc);
+	i ->
+	    {{i, LineNo}, Bs} = decode_int(Tag, B, Bs0),
+	    disasm_line_items(N-1, Bs, FileNo, [{FileNo, LineNo}|Acc])
+    end.
+
+disasm_line_files(0, <<>>, Acc) -> Acc;
+disasm_line_files(N, <<Size:16, FileBin:Size/binary, Rest/binary>>, Acc) when N > 0 ->
+    File = unicode:characters_to_list(FileBin),
+    disasm_line_files(N - 1, Rest, Acc#{map_size(Acc) => File}).
+
+%%-----------------------------------------------------------------------
 %% Disassembles the code chunk of a BEAM file:
 %%   - The code is first disassembled into a long list of instructions.
 %%   - This list is then split into functions and all names are resolved.
@@ -257,7 +307,7 @@ beam_disasm_code(<<_SS:32, % Sub-Size (length of information before code)
 		  _OM:32,  % Opcode Max
 		  _L:32,_F:32,
 		  CodeBin/binary>>, Atoms, Imports,
-		 Str, Lambdas, Literals, M) ->
+		 Str, Lambdas, Literals, Lines, M) ->
     Code = binary_to_list(CodeBin),
     try disasm_code(Code, Atoms, Literals) of
 	DisasmCode ->
@@ -265,7 +315,7 @@ beam_disasm_code(<<_SS:32, % Sub-Size (length of information before code)
 	    Labels = mk_labels(local_labels(Functions)),
 	    [function__code_update(Function,
 				   resolve_names(Is, Imports, Str,
-						 Labels, Lambdas, Literals, M))
+						 Labels, Lambdas, Lines, M))
 	     || Function = #function{code=Is} <- Functions]
     catch
 	error:Rsn ->
@@ -636,6 +686,7 @@ decode_tag(?tag_z) -> z.
 %%    (note: string table should be passed as a BINARY so that we can
 %%    use binary_to_list/3!)
 %% - convert instruction to its readable form ...
+%% - resolve line instructions into [{location, File, Line}] form
 %% 
 %% Currently, only the first three are done (systematically, at least).
 %%
@@ -643,8 +694,9 @@ decode_tag(?tag_z) -> z.
 %%  representation means it is simpler to iterate over all args, etc.
 %%-----------------------------------------------------------------------
 
-resolve_names(Fun, Imports, Str, Lbls, Lambdas, Literals, M) ->
-    [resolve_inst(Instr, Imports, Str, Lbls, Lambdas, Literals, M) || Instr <- Fun].
+resolve_names(Fun, Imports, Str, Lbls, Lambdas, Lines, M) ->
+    [resolve_inst(Instr, Imports, Str, Lbls, Lambdas, Lines, M)
+     || Instr <- Fun].
 
 %%
 %% New make_fun2/4 instruction added in August 2001 (R8).
@@ -657,7 +709,19 @@ resolve_inst({make_fun2,Args}, _, _, _, Lambdas, _, M) ->
     {OldIndex,{F,A,_Lbl,_Index,NumFree,OldUniq}} =
 	lists:keyfind(OldIndex, 1, Lambdas),
     {make_fun2,{M,F,A},OldIndex,OldUniq,NumFree};
-resolve_inst(Instr, Imports, Str, Lbls, _Lambdas, _Literals, _M) ->
+
+%%
+%% R15A.
+%% It is moved here to be able to resolve the index into the line table.
+%%
+resolve_inst({line,[Index]}, _, _, _, _, Lines, _) ->
+    I = resolve_arg(Index),
+    case Lines of
+	#{I := Loc} -> {line, [Loc]};
+	_ -> {line, []}
+    end;
+
+resolve_inst(Instr, Imports, Str, Lbls, _Lambdas, _Lines, _M) ->
     %% io:format(?MODULE_STRING":resolve_inst ~p.~n", [Instr]),
     resolve_inst(Instr, Imports, Str, Lbls).
 
@@ -1131,12 +1195,6 @@ resolve_inst({recv_mark,[Lbl]},_,_,_) ->
     {recv_mark,Lbl};
 resolve_inst({recv_set,[Lbl]},_,_,_) ->
     {recv_set,Lbl};
-
-%%
-%% R15A.
-%%
-resolve_inst({line,[Index]},_,_,_) ->
-    {line,resolve_arg(Index)};
 
 %%
 %% 17.0
