@@ -699,8 +699,9 @@ void hipe_set_closure_stub(ErlFunEntry *fe)
 Eterm hipe_build_stacktrace(Process *p, struct StackTrace *s)
 {
     int depth, i;
-    Uint heap_size;
-    Eterm *hp, *hp_end, mfa, m, f, head, *next_p, next;
+    Eterm *hp, mfa, m, f, head, *next_p, next, loc;
+    Eterm file_term, tuple;
+    const struct hipe_sdesc *sdesc;
     const void *ra;
     unsigned int a;
 
@@ -708,24 +709,50 @@ Eterm hipe_build_stacktrace(Process *p, struct StackTrace *s)
     if (depth < 1)
 	return NIL;
 
-    heap_size = 7 * depth;	/* each [{M,F,A,[]}|_] is 2+5 == 7 words */
-    hp = HAlloc(p, heap_size);
-    hp_end = hp + heap_size;
-
     head = NIL;
     next_p = &head;
 
     for (i = 0; i < depth; ++i) {
 	ra = (const void*)s->trace[i];
-	if (!hipe_find_mfa_from_ra(ra, &m, &f, &a))
+	if (!hipe_find_mfa_from_ra(ra, &m, &f, &a) ||
+	    !(sdesc = hipe_find_sdesc((unsigned long)ra)) ||
+	    sdesc->m_aix == atom_val(am_Empty))
 	    continue;
-	mfa = TUPLE4(hp, m, f, make_small(a), NIL);
+
+	loc = NIL;
+	if (sdesc->line != 0) {
+	    if (sdesc->file_aix == 0) {
+		/* Special case: Module name with ".erl" appended */
+		Atom* ap = atom_tab(atom_val(m));
+		hp = HAlloc(p, 2*(ap->len+4) + 3+2+3+2+5+2);
+		file_term = buf_to_intlist(&hp, ".erl", 4, NIL);
+		file_term = buf_to_intlist(&hp, (char*)ap->name, ap->len,
+					   file_term);
+	    } else {
+		Atom* ap = atom_tab(sdesc->file_aix);
+		hp = HAlloc(p, 2*(ap->len) + 3+2+3+2+5+2);
+		file_term = buf_to_intlist(&hp, (char*)ap->name, ap->len, NIL);
+	    }
+	    tuple = TUPLE2(hp, am_line, make_small(sdesc->line));
+	    hp += 3;
+	    loc = CONS(hp, tuple, loc);
+	    hp += 2;
+	    tuple = TUPLE2(hp, am_file, file_term);
+	    hp += 3;
+	    loc = CONS(hp, tuple, loc);
+	    hp += 2;
+	} else {
+	    /* No location information */
+	    hp = HAlloc(p, 5+2);
+	}
+
+	mfa = TUPLE4(hp, m, f, make_small(a), loc);
 	hp += 5;
 	next = CONS(hp, mfa, NIL);
 	*next_p = next;
 	next_p = &CDR(list_val(next));
 	hp += 2;
     }
-    HRelease(p, hp_end, hp);
+
     return head;
 }

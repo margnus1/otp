@@ -51,3 +51,5 @@
 	end).
 
 -define(STACK_DESC(ExnRA, FSize, Arity, Live), {ExnRA, FSize, Arity, Live}).
+-define(STACK_DESC_LOC(ExnRA, FSize, Arity, Live, Loc),
+	{ExnRA, FSize, Arity, Live, Loc}).

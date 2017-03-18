@@ -149,6 +149,8 @@ struct hipe_sdesc *hipe_decode_sdesc(Eterm arg)
     Eterm *live;
     Uint fsize, nargs, stk_nargs, nlive, i, nslots, off;
     Uint livebitswords, sdescbytes;
+    Uint file_aix;
+    Sint line;
     void *p;
     struct hipe_sdesc *sdesc;
     Eterm* mfa_tpl;
@@ -158,7 +160,7 @@ struct hipe_sdesc *hipe_decode_sdesc(Eterm arg)
         return 0;
 
     tp = tuple_val(arg);
-    if (tp[0] != make_arityval(6) ||
+    if (tp[0] != make_arityval(7) ||
         term_to_Uint(tp[1], &ra) == 0 ||
 	term_to_Uint(tp[2], &exnra) == 0 ||
 	is_not_small(tp[3]) ||
@@ -176,6 +178,28 @@ struct hipe_sdesc *hipe_decode_sdesc(Eterm arg)
 
     if (stk_nargs > nargs)
         return 0;
+
+    if (is_small(tp[7])) {
+        file_aix = 0;
+        line = signed_val(tp[7]);
+    } else if (is_tuple(tp[7])) {
+        Eterm *loc_tpl = tuple_val(tp[7]);
+        if (loc_tpl[0] != make_arityval(2) ||
+            is_not_atom(loc_tpl[1]) ||
+            is_not_small(loc_tpl[2]))
+            return 0;
+        file_aix = atom_val(loc_tpl[1]);
+        line = signed_val(loc_tpl[2]);
+    } else {
+        return 0;
+    }
+
+    if (line < 0) return 0;
+    if (line >= (1 << 24)) {
+        /* Too large to fit in sdesc, but not invalid input; silently drop */
+        file_aix = 0;
+        line = 0;
+    }
 
     /* Get tuple with live slots */
     live = tuple_val(tp[5]) + 1;
@@ -212,7 +236,8 @@ struct hipe_sdesc *hipe_decode_sdesc(Eterm arg)
     sdesc->m_aix = atom_val(mfa_tpl[1]);
     sdesc->f_aix = atom_val(mfa_tpl[2]);
     sdesc->a = nargs;
-
+    sdesc->file_aix = file_aix;
+    sdesc->line = (Uint32) line;
 
     /* Initialise head of sdesc. */
     sdesc->bucket.next = 0;

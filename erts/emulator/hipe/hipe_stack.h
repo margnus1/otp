@@ -35,13 +35,15 @@ struct hipe_sdesc {
 	unsigned long hvalue;	/* return address */
 	struct hipe_sdesc *next;	/* hash collision chain */
     } bucket;
+    struct hipe_sdesc* next_in_modi;
     unsigned int fsize : 23;    /* frame size */
     unsigned int has_exnra : 1; /* exn handler presence flag */
     unsigned int stk_nargs : 8; /* arguments on stack */
     Uint32 m_aix;
     Uint32 f_aix;
-    Uint32 a;
-    struct hipe_sdesc* next_in_modi;
+    Uint32 file_aix;            /* 0 if in (module name).erl */
+    Uint32 line : 24;           /* 0 if source location is unknown */
+    Uint32 a : 8;
     Uint32 livebits[1]; /* size depends on arch & data in summary field */
 };
 

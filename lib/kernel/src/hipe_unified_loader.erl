@@ -559,8 +559,12 @@ patch_atom(Address, Atom) ->
   ?ASSERT(assert_local_patch(Address)),
   patch_instr(Address, hipe_bifs:atom_to_word(Atom), atom).
 
-patch_sdesc(?STACK_DESC(SymExnRA, FSize, Arity, Live),
-	    Address, {_ConstMap2,CodeAddress}, FunDefs) ->
+patch_sdesc(SDesc, Address, {_ConstMap2,CodeAddress}, FunDefs) ->
+  {SymExnRA, FSize, Arity, Live, Loc} =
+    case SDesc of
+      ?STACK_DESC    (E,S,A,L)   -> {E,S,A,L,0};
+      ?STACK_DESC_LOC(E,S,A,L,O) -> {E,S,A,L,O}
+    end,
   ExnRA =
     case SymExnRA of
       [] -> 0; % No catch
@@ -568,7 +572,7 @@ patch_sdesc(?STACK_DESC(SymExnRA, FSize, Arity, Live),
     end,
   ?ASSERT(assert_local_patch(Address)),
   MFA = address_to_mfa_lth(Address, FunDefs),
-  hipe_bifs:enter_sdesc({Address, ExnRA, FSize, Arity, Live, MFA},
+  hipe_bifs:enter_sdesc({Address, ExnRA, FSize, Arity, Live, MFA, Loc},
 		       get(hipe_loader_state)).
 
 

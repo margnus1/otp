@@ -76,6 +76,8 @@ static __inline__ void hipe_arch_glue_init(void)
     nbif_return_sdesc.sdesc.m_aix = atom_val(am_Empty);
     nbif_return_sdesc.sdesc.f_aix = atom_val(am_return);
     nbif_return_sdesc.sdesc.a     = 0;
+    nbif_return_sdesc.sdesc.file_aix = 0;
+    nbif_return_sdesc.sdesc.line     = 0;
 
     hipe_init_sdesc_table(&nbif_return_sdesc.sdesc);
 }
