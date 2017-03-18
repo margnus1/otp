@@ -284,7 +284,11 @@ no_erts_trampolines(Architecture) ->
     _ -> false
   end.
 
-find_callee_mfas([{Type,Data}|Patches], MFAs, SkipErtsSyms) ->
+find_callee_mfas([Patch|Patches], MFAs, SkipErtsSyms) ->
+  {Type, Data} = case Patch of
+                   {T, _, D} -> {T, D};
+                   Tpl -> Tpl
+                 end,
   NewMFAs =
     case ?EXT2PATCH_TYPE(Type) of
       call_local -> add_callee_mfas(Data, MFAs, SkipErtsSyms);
@@ -386,7 +390,11 @@ offsets_to_addresses(Os, Base) ->
 
 %%------------------------------------------------------------------------
 
-find_closure_patches([{Type,Refs} | Rest]) ->
+find_closure_patches([Ref | Rest]) ->
+  {Type, Refs} = case Ref of
+                   {T, _, R} -> {T, R};
+                   Tpl -> Tpl
+                 end,
   case ?EXT2PATCH_TYPE(Type) of 
     load_address -> 
       find_closure_refs(Refs, Rest);
@@ -450,7 +458,7 @@ make_beam_stub(Mod, LoaderState, MD5, Beam, FunDefs, ClosuresToPatch) ->
 
 %%========================================================================
 %% Patching 
-%%  @spec patch(refs(), BaseAddress::integer(), ConstAndZone::term(),
+%%  @spec patch(refs(), BaseAddress::integer(), TblsAndZone::term(),
 %%              FunDefs::term(), TrampolineMap::term()) -> 'ok'.
 %%   @type refs()=[{RefType::integer(), Reflist::reflist()} | refs()]
 %%
@@ -463,7 +471,12 @@ make_beam_stub(Mod, LoaderState, MD5, Beam, FunDefs, ClosuresToPatch) ->
 %%  (we use this to look up the address of a referred function only once).
 %%
 
-patch([{Type,SortedRefs}|Rest], CodeAddress, ConstMap2, FunDefs, TrampolineMap) ->
+patch([RefsOfType|Rest], CodeAddress, ConstMap2, FunDefs, TrampolineMap) ->
+  {Type,Table,SortedRefs} =
+    case RefsOfType of
+      {T, R} -> {T, no_table, R};
+      Tpl -> Tpl
+    end,
   ?debug_msg("Patching ~w at [~w+offset] with ~w\n",
 	     [Type,CodeAddress,SortedRefs]),
   case ?EXT2PATCH_TYPE(Type) of 
@@ -472,7 +485,8 @@ patch([{Type,SortedRefs}|Rest], CodeAddress, ConstMap2, FunDefs, TrampolineMap) 
     call_remote ->
       patch_call(SortedRefs, CodeAddress, FunDefs, 'remote', TrampolineMap);
     Other -> 
-      patch_all(Other, SortedRefs, CodeAddress, {ConstMap2,CodeAddress}, FunDefs)
+      patch_all(Other, SortedRefs, CodeAddress, {ConstMap2,Table,CodeAddress},
+                FunDefs)
   end,
   patch(Rest, CodeAddress, ConstMap2, FunDefs, TrampolineMap);
 patch([], _, _, _, _) -> ok.
@@ -521,33 +535,33 @@ patch_call_insn(CallAddress, DestAddress, Trampoline) ->
 %% ____________________________________________________________________
 %% 
 
-patch_all(Type, [{Dest,Offsets}|Rest], BaseAddress, ConstAndZone, FunDefs)->
-  patch_all_offsets(Type, Dest, Offsets, BaseAddress, ConstAndZone, FunDefs),
-  patch_all(Type, Rest, BaseAddress, ConstAndZone, FunDefs);
+patch_all(Type, [{Dest,Offsets}|Rest], BaseAddress, TblsAndZone, FunDefs)->
+  patch_all_offsets(Type, Dest, Offsets, BaseAddress, TblsAndZone, FunDefs),
+  patch_all(Type, Rest, BaseAddress, TblsAndZone, FunDefs);
 patch_all(_, [], _, _, _) -> ok.
 
 patch_all_offsets(Type, Data, [Offset|Offsets], BaseAddress,
-		  ConstAndZone, FunDefs) ->
+		  TblsAndZone, FunDefs) ->
   ?debug_msg("Patching ~w at [~w+~w] with ~w\n",
 	     [Type,BaseAddress,Offset, Data]),
   Address = BaseAddress + Offset,
-  patch_offset(Type, Data, Address, ConstAndZone, FunDefs),
+  patch_offset(Type, Data, Address, TblsAndZone, FunDefs),
   ?debug_msg("Patching done\n",[]),
-  patch_all_offsets(Type, Data, Offsets, BaseAddress, ConstAndZone, FunDefs);
+  patch_all_offsets(Type, Data, Offsets, BaseAddress, TblsAndZone, FunDefs);
 patch_all_offsets(_, _, [], _, _, _) -> ok.
 
 %%----------------------------------------------------------------
 %% Handle any patch type except 'call_local' or 'call_remote'.
 %%
-patch_offset(Type, Data, Address, ConstAndZone, FunDefs) ->
+patch_offset(Type, Data, Address, TblsAndZone, FunDefs) ->
   case Type of
     load_address ->
-      patch_load_address(Data, Address, ConstAndZone, FunDefs);
+      patch_load_address(Data, Address, TblsAndZone, FunDefs);
     load_atom ->
       Atom = Data,
       patch_atom(Address, Atom);
     sdesc ->
-      patch_sdesc(Data, Address, ConstAndZone, FunDefs);
+      patch_sdesc(Data, Address, TblsAndZone, FunDefs);
     x86_abs_pcrel ->
       patch_instr(Address, Data, x86_abs_pcrel)
     %% _ ->
@@ -559,12 +573,17 @@ patch_atom(Address, Atom) ->
   ?ASSERT(assert_local_patch(Address)),
   patch_instr(Address, hipe_bifs:atom_to_word(Atom), atom).
 
-patch_sdesc(SDesc, Address, {_ConstMap2,CodeAddress}, FunDefs) ->
-  {SymExnRA, FSize, Arity, Live, Loc} =
+patch_sdesc(SDesc, Address, {_ConstMap2,FileTable,CodeAddress}, FunDefs) ->
+  {SymExnRA, FSize, Arity, Live, Loc0} =
     case SDesc of
       ?STACK_DESC    (E,S,A,L)   -> {E,S,A,L,0};
       ?STACK_DESC_LOC(E,S,A,L,O) -> {E,S,A,L,O}
     end,
+  Loc = case Loc0 of
+          {FileNo, Line} ->
+            {element(FileNo, FileTable), Line};
+          Line -> Line
+        end,
   ExnRA =
     case SymExnRA of
       [] -> 0; % No catch
@@ -579,14 +598,14 @@ patch_sdesc(SDesc, Address, {_ConstMap2,CodeAddress}, FunDefs) ->
 %%----------------------------------------------------------------
 %% Handle a 'load_address'-type patch.
 %%
-patch_load_address(Data, Address, ConstAndZone, FunDefs) ->
+patch_load_address(Data, Address, TblsAndZone, FunDefs) ->
   case Data of
     {local_function,DestMFA} ->
       patch_load_mfa(Address, DestMFA, FunDefs, 'local');
     {remote_function,DestMFA} ->
       patch_load_mfa(Address, DestMFA, FunDefs, 'remote');
     {constant,Name} ->
-      {ConstMap2,_CodeAddress} = ConstAndZone,
+      {ConstMap2,_Tbl,_CodeAddress} = TblsAndZone,
       ConstAddress = find_const(Name, ConstMap2),
       patch_instr(Address, ConstAddress, constant);
     {closure,{DestMFA,Uniq,Index}} ->

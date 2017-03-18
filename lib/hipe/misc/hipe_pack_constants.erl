@@ -165,12 +165,14 @@ get_sorted_refs([], []) ->
 
 -type ref_type() :: 0..4.
 
--spec slim_refs([{ref_type(),non_neg_integer(),term()}]) ->
-	[{ref_type(), [{term(), [non_neg_integer()]}]}].
+-spec slim_refs([{ref_type(),non_neg_integer(),term()}])
+	       -> [{ref_type(),           [{term(), [non_neg_integer()]}]}
+		   |{ref_type(), tuple(), [{term(), [non_neg_integer()]}]}].
 slim_refs([]) -> [];
-slim_refs(Refs) ->
-  [Ref|Rest] = lists:keysort(1, Refs),
-  compact_ref_types(Rest, element(1, Ref), [Ref], []).
+slim_refs(Refs0) ->
+  [Ref|Refs1] = lists:keysort(1, Refs0),
+  Refs2 = compact_ref_types(Refs1, element(1, Ref), [Ref], []),
+  tabulate_ref_types(Refs2).
 
 compact_ref_types([Ref|Refs], Type, AccofType, Acc) ->
   case element(1, Ref) of
@@ -198,6 +200,34 @@ compact_dests([Ref|Refs], Dest, AccofDest, Acc) ->
   end;
 compact_dests([], Dest, AccofDest, Acc) ->
   [{Dest,AccofDest}|Acc].
+
+tabulate_ref_types([{?SDESC, List0}|Rest]) ->
+  {List, Map} = tabulate_sdesc_files(List0, #{}, []),
+  Table = list_to_tuple([K || {K, _} <- lists:keysort(2, maps:to_list(Map))]),
+  [{?SDESC, Table, List}|tabulate_ref_types(Rest)];
+tabulate_ref_types([{_, _}=Ref|Rest]) -> [Ref|tabulate_ref_types(Rest)];
+tabulate_ref_types([]) -> [].
+
+tabulate_sdesc_files([], FileTbl, Acc) -> {lists:reverse(Acc), FileTbl};
+tabulate_sdesc_files([{SDesc0, Locations}|Rest], FileTbl0, Acc) ->
+  {SDesc, FileTbl} =
+    case SDesc0 of
+      ?STACK_DESC(_ExnRA, _FSize, _Arity, _Live) -> {SDesc0, FileTbl0};
+      ?STACK_DESC_LOC(ExnRA, FSize, Arity, Live, Loc0) ->
+	{Loc, FileTbl1} =
+	   case Loc0 of
+	     Line when is_integer(Line) -> {Loc0, FileTbl0};
+	     {File, Line} when is_atom(File), is_integer(Line) ->
+	       case FileTbl0 of
+		 #{File := Number} -> {{Number, Line}, FileTbl0};
+		 #{} -> % new file
+		   Number = map_size(FileTbl0) + 1,
+		   {{Number, Line}, FileTbl0#{File => Number}}
+	       end
+	   end,
+	{?STACK_DESC_LOC(ExnRA, FSize, Arity, Live, Loc), FileTbl1}
+    end,
+  tabulate_sdesc_files(Rest, FileTbl, [{SDesc, Locations} | Acc]).
 
 %%
 %% slim_constmap/1 takes a packed ConstMap, as produced by pack_labels
