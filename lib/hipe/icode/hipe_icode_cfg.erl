@@ -117,7 +117,7 @@ fails_to(Instr) ->
 %% True if instr has no effect.
 -spec is_comment(icode_instr()) -> boolean().
 is_comment(Instr) ->
-  hipe_icode:is_comment(Instr).
+  hipe_icode:is_comment(Instr) orelse hipe_icode:is_line(Instr).
 
 %% True if instr is just a jump (no side-effects).
 -spec is_goto(icode_instr()) -> boolean().
@@ -147,7 +147,8 @@ is_pure_branch(Instr) ->
     #icode_end_try{} -> false;
     #icode_begin_handler{} -> false;
     #icode_fail{} -> false;
-    #icode_comment{} -> false
+    #icode_comment{} -> false;
+    #icode_line{} -> false
   end.
 
 -spec is_phi(icode_instr()) -> boolean().

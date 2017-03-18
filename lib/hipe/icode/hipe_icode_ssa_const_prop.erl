@@ -94,6 +94,7 @@ visit_expression(Instruction, Environment) ->
     #icode_fail{} ->
       visit_fail              (Instruction, EvaluatedArguments, Environment);
     #icode_comment{} -> {[], [], Environment};
+    #icode_line{} ->    {[], [], Environment};
     #icode_end_try{} -> {[], [], Environment};
     #icode_enter{} ->   {[], [], Environment};
     #icode_label{} ->   {[], [], Environment};
@@ -463,6 +464,7 @@ update_instruction(Instruction, Environment) ->
     #icode_begin_handler{} -> [Instruction];
     #icode_begin_try{} ->     [Instruction];
     #icode_comment{} ->       [Instruction];
+    #icode_line{} ->          [Instruction];
     #icode_end_try{} ->       [Instruction];
     #icode_fail{} ->          [Instruction];
     #icode_goto{} ->          [Instruction];

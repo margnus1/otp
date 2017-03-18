@@ -39,7 +39,7 @@
 	 is_prim/1,
 	 prim_prim/1,
 
-	 mk_sdesc/4,
+	 mk_sdesc/5,
 
 	 mk_alu/4,
 	 mk_mov/2,
@@ -166,8 +166,8 @@ mk_prim(Prim) -> #sparc_prim{prim=Prim}.
 is_prim(X) -> case X of #sparc_prim{} -> true; _ -> false end.
 prim_prim(#sparc_prim{prim=Prim}) -> Prim.
 
-mk_sdesc(ExnLab, FSize, Arity, Live) ->
-  #sparc_sdesc{exnlab=ExnLab, fsize=FSize, arity=Arity, live=Live}.
+mk_sdesc(ExnLab, FSize, Arity, Live, Loc) ->
+  #sparc_sdesc{exnlab=ExnLab, fsize=FSize, arity=Arity, live=Live, loc=Loc}.
 
 mk_alu(AluOp, Src1, Src2, Dst) ->
   #alu{aluop=AluOp, src1=Src1, src2=Src2, dst=Dst}.

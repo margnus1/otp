@@ -93,6 +93,15 @@ pp_instr(Dev, I) ->
 	      false -> io_lib:format("~p", [Txt])
 	    end,
       io:format(Dev, "    % ~s~n", [Str]);
+    #icode_line{} ->
+      Str = case hipe_icode:line_loc(I) of
+	      0 -> "no location information";
+	      Line when is_integer(Line) ->
+		io_lib:format("line: ~w", [Line]);
+	      {File, Line} ->
+		io_lib:format("file: ~s, line: ~w", [File, Line])
+	    end,
+      io:format(Dev, "    % ~s~n", [Str]);
     #icode_phi{} ->
       io:format(Dev, "    ", []),
       pp_arg(Dev, hipe_icode:phi_dst(I)),

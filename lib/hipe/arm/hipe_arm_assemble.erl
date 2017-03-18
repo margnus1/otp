@@ -475,14 +475,15 @@ encode_reloc(Data, Address, FunAddress, LabelMap) ->
     {load_address,X} ->
       {?LOAD_ADDRESS, Address, X};
     {sdesc,SDesc} ->
-      #arm_sdesc{exnlab=ExnLab,fsize=FSize,arity=Arity,live=Live} = SDesc,
+      #arm_sdesc{exnlab=ExnLab,fsize=FSize,arity=Arity,live=Live,loc=Loc}
+	= SDesc,
       ExnRA =
 	case ExnLab of
 	  [] -> [];	% don't cons up a new one
 	  ExnLab -> gb_trees:get(ExnLab, LabelMap) + FunAddress
 	end,
       {?SDESC, Address,
-       ?STACK_DESC(ExnRA, FSize, Arity, Live)}
+       ?STACK_DESC_LOC(ExnRA, FSize, Arity, Live, Loc)}
   end.
 
 untag_mfa_or_prim(#arm_mfa{m=M,f=F,a=A}) -> {M,F,A};

@@ -43,7 +43,7 @@ ifdef HIPE_ENABLED
 HIPE_MODULES = hipe_rtl hipe_rtl_cfg \
 	  hipe_rtl_liveness \
 	  hipe_icode2rtl hipe_rtl_mk_switch \
-	  hipe_rtl_primops \
+	  hipe_rtl_primops hipe_rtl_propagate_line \
 	  hipe_rtl_varmap hipe_rtl_exceptions \
 	  hipe_rtl_binary_match hipe_rtl_binary_construct \
 	  hipe_rtl_arith_32 hipe_rtl_arith_64 \

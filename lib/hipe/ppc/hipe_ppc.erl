@@ -32,7 +32,7 @@
 	 is_prim/1,
 	 prim_prim/1,
 
-	 mk_sdesc/4,
+	 mk_sdesc/5,
 
 	 mk_alu/4,
 
@@ -170,8 +170,8 @@ mk_prim(Prim) -> #ppc_prim{prim=Prim}.
 is_prim(X) -> case X of #ppc_prim{} -> true; _ -> false end.
 prim_prim(#ppc_prim{prim=Prim}) -> Prim.
 
-mk_sdesc(ExnLab, FSize, Arity, Live) ->
-  #ppc_sdesc{exnlab=ExnLab, fsize=FSize, arity=Arity, live=Live}.
+mk_sdesc(ExnLab, FSize, Arity, Live, Loc) ->
+  #ppc_sdesc{exnlab=ExnLab, fsize=FSize, arity=Arity, live=Live, loc=Loc}.
 
 mk_alu(AluOp, Dst, Src1, Src2) ->
   #alu{aluop=AluOp, dst=Dst, src1=Src1, src2=Src2}.

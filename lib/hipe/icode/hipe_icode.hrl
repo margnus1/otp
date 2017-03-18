@@ -78,6 +78,8 @@
 
 -type icode_comment_text() :: atom() | string().
 
+-type line_loc() :: 0 | pos_integer() | {atom(), pos_integer()}.
+
 -type icode_info() :: [{'arg_types', [erl_types:erl_type()]}].
 
 %%---------------------------------------------------------------------
@@ -144,6 +146,8 @@
 
 -record(icode_comment, {text :: icode_comment_text()}).
 
+-record(icode_line, {loc :: line_loc()}).
+
 %%---------------------------------------------------------------------
 %% Icode instructions
 %%---------------------------------------------------------------------
@@ -154,7 +158,7 @@
                       | #icode_goto{} | #icode_if{} | #icode_label{}
 		      | #icode_move{} | #icode_phi{} | #icode_return{}
                       | #icode_switch_tuple_arity{} | #icode_switch_val{}
-		      | #icode_type{}.
+		      | #icode_type{} | #icode_line{}.
 -type icode_instrs() :: [icode_instr()].
 
 %%---------------------------------------------------------------------

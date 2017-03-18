@@ -244,7 +244,8 @@ analyse_insn(I, Info, LookupFun) ->
       #icode_move{} -> analyse_move(NewI);
       #icode_phi{} -> analyse_phi(NewI);
       #icode_begin_handler{} -> analyse_begin_handler(NewI);
-      #icode_comment{} -> NewI
+      #icode_comment{} -> NewI;
+      #icode_line{} -> NewI
     end,
   {enter_vals(FinalI, Info), FinalI}.
 

@@ -387,7 +387,8 @@ is_expr(I) ->
         #goto_index{} -> false;
         #gctest{} -> false;
         #label{} -> false;
-        #load{} -> true;
+	#line{} -> false;
+	#load{} -> true;
         #load_address{} ->
 	  case hipe_rtl:load_address_type(I) of
 	    c_const -> false;

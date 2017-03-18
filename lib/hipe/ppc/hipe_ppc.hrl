@@ -20,7 +20,7 @@
 %%% type	::= tagged | untagged
 %%% allocatable	::= true | false
 %%%
-%%% sdesc	::= {ppc_sdesc, exnlab, fsize, arity, live}
+%%% sdesc	::= {ppc_sdesc, exnlab, fsize, arity, live, loc}
 %%% exnlab	::= [] | label
 %%% fsize	::= int32		(frame size in words)
 %%% live	::= <tuple of int32>	(word offsets)
@@ -31,7 +31,7 @@
 
 -record(ppc_mfa, {m::atom(), f::atom(), a::arity()}).
 -record(ppc_prim, {prim}).
--record(ppc_sdesc, {exnlab, fsize, arity::arity(), live}).
+-record(ppc_sdesc, {exnlab, fsize, arity::arity(), live, loc}).
 -record(ppc_simm16, {value}).
 -record(ppc_temp, {reg, type, allocatable}).
 -record(ppc_uimm16, {value}).

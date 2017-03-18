@@ -521,14 +521,15 @@ encode_insns([I|Insns], Address, FunAddress, LabelMap, Relocs, AccCode, Options)
       print_insn(Address, [], I, Options),
       encode_insns(Insns, Address, FunAddress, LabelMap, Relocs, AccCode, Options);
     {'.sdesc',SDesc,_} ->
-      #x86_sdesc{exnlab=ExnLab,fsize=FSize,arity=Arity,live=Live} = SDesc,
+      #x86_sdesc{exnlab=ExnLab,fsize=FSize,arity=Arity,live=Live,loc=Loc}
+	= SDesc,
       ExnRA =
 	case ExnLab of
 	  [] -> [];	% don't cons up a new one
 	  ExnLab -> gb_trees:get(ExnLab, LabelMap) + FunAddress
 	end,
       Reloc = {?SDESC, Address,
-	       ?STACK_DESC(ExnRA, FSize, Arity, Live)},
+	       ?STACK_DESC_LOC(ExnRA, FSize, Arity, Live, Loc)},
       encode_insns(Insns, Address, FunAddress, LabelMap, [Reloc|Relocs], AccCode, Options);
     _ ->
       {Op,Arg,_} = fix_jumps(I, Address, FunAddress, LabelMap),

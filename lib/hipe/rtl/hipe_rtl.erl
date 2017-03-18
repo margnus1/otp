@@ -226,6 +226,7 @@
 	 call_fail/1,
 	 call_type/1,
 	 call_normal/1,
+	 call_loc/1,
 	 call_normal_update/2,
 	 %% call_continuation_update/2,
 	 call_fail_update/2,
@@ -245,6 +246,10 @@
 	 mk_comment/1,
 	 comment_text/1,
 	 is_comment/1,
+
+	 mk_line/1,
+	 line_loc/1,
+	 is_line/1,
 
 	 mk_fload/3,
 	 fload_dst/1,
@@ -673,6 +678,7 @@ call_arglist_update(C, NewArgList) -> C#call{arglist=NewArgList}.
 call_continuation(#call{continuation=Continuation}) -> Continuation.
 call_fail(#call{failcontinuation=FailContinuation}) -> FailContinuation.
 call_type(#call{type=Type}) -> Type.
+call_loc(#call{loc=Loc}) -> Loc.
 call_continuation_update(C, NewCont) -> C#call{continuation=NewCont}.
 call_fail_update(C, NewCont) -> C#call{failcontinuation=NewCont}.
 is_call(#call{}) -> true;
@@ -760,6 +766,14 @@ mk_comment(Text) -> #comment{text=Text}.
 comment_text(#comment{text=Text}) -> Text.
 is_comment(#comment{}) -> true;
 is_comment(_) -> false.
+
+%%
+%% location info
+%%
+
+mk_line(Loc) -> #line{loc=Loc}.
+line_loc(#line{loc=Loc}) -> Loc.
+is_line(I) -> is_record(I, line).
 
 %%-------------------------------------------------------------------------
 %% Floating point stuff.
@@ -946,6 +960,7 @@ args(I) ->
     #goto_index{} -> [];
     #gctest{} -> [gctest_words(I)];
     #label{} -> [];
+    #line{} -> [];
     #load{} -> [load_src(I), load_offset(I)];
     #load_address{} -> [];
     #load_atom{} -> [];
@@ -981,6 +996,7 @@ defines(Instr) ->
 	   #goto{} -> [];
 	   #goto_index{} -> [];
 	   #label{} -> [];
+	   #line{} -> [];
 	   #load{} -> [load_dst(Instr)];
 	   #load_address{} -> [load_address_dst(Instr)];
 	   #load_atom{} -> [load_atom_dst(Instr)];
@@ -1063,6 +1079,8 @@ subst_uses(Subst, I) ->
     #gctest{} ->
       gctest_words_update(I, subst1(Subst, gctest_words(I)));
     #label{} ->
+      I;
+    #line{} ->
       I;
     #load{} ->
       I0 = load_src_update(I, subst1(Subst, load_src(I))),
@@ -1163,6 +1181,8 @@ subst_uses_llvm(Subst, I) ->
       gctest_words_update(I, NewWords);
     #label{} ->
       I;
+    #line{} ->
+      I;
     #load{} ->
       {NewSrc, Subst1} = subst1_llvm(Subst, load_src(I)),
       {NewOffset, _ } = subst1_llvm(Subst1, load_offset(I)),
@@ -1245,6 +1265,8 @@ subst_defines(Subst, I)->
       I;
     #label{} ->
       I;
+    #line{} ->
+      I;
     #load{} ->
       load_dst_update(I, subst1(Subst, load_dst(I)));
     #load_address{} ->
@@ -1297,6 +1319,7 @@ is_safe(Instr) ->
     #goto{} -> false;
     #goto_index{} -> false;  % ???
     #label{} -> true;
+    #line{} -> false;
     #load{} -> true;
     #load_address{} -> true;
     #load_atom{} -> true;
@@ -1610,6 +1633,11 @@ pp_instr(Dev, I) ->
       end,
       pp_args(Dev, call_arglist(I)),
       io:format(Dev, ")", []),
+      case call_loc(I) of
+	0 -> true;
+	Loc ->
+	  io:format(Dev, " at line ~w", [Loc])
+      end,
       case call_continuation(I) of
 	[] -> true;
 	CC ->
@@ -1646,6 +1674,8 @@ pp_instr(Dev, I) ->
       io:format(Dev, ")~n", []);
     #comment{} ->
       io:format(Dev, "    ;; ~p~n", [comment_text(I)]);
+    #line{} ->
+      io:format(Dev, "    ;; line: ~p~n", [line_loc(I)]);
     #fixnumop{} ->
       io:format(Dev, "    ", []),
       pp_arg(Dev, fixnumop_dst(I)),

@@ -132,6 +132,8 @@ visit_expression(Instruction, Environment) ->
       visit_goto_index(Instruction, Environment);
 %%    #label{} ->
 %%      visit_label(Instruction, Environment);
+%%    #line{} ->
+%%      visit_line(Instruction, Environment);
     #load{} ->
       visit_load(Instruction, Environment);
     #load_address{} ->
@@ -675,6 +677,8 @@ update_instruction(Inst, Env) ->
       update_goto_index(Inst, Env);
 %%    #label{} ->
 %%      [ Inst ];
+%%    #line{} ->
+%%      [Inst];
     #load{} ->
       subst_all_uses(Inst, Env);
     #load_address{} ->

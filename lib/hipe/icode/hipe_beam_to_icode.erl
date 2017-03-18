@@ -140,7 +140,7 @@ trans_mfa_code(M,F,A, FunBeamCode, ClosureInfo) ->
   %% Record the function arguments
   FunLbl = mk_label(new),
   Env1 = env__mk_env(M, F, A, hipe_icode:label_name(FunLbl)),
-  Code1 = lists:flatten(trans_fun(FunBeamCode,Env1)),
+  [Line=#icode_line{}|Code1] = lists:flatten(trans_fun(FunBeamCode,Env1)),
   Code2 = fix_fallthroughs(fix_catches(Code1)),
   MFA = {M,F,A},
   %% Debug code
@@ -152,7 +152,7 @@ trans_mfa_code(M,F,A, FunBeamCode, ClosureInfo) ->
   Leafness = leafness(Code3, IsClosure),
   IsLeaf = is_leaf_code(Leafness),
   Code4 =
-    [FunLbl |
+    [FunLbl, Line |
      case needs_redtest(Leafness) of
        false -> Code3;
        true -> [mk_redtest()|Code3]
@@ -266,19 +266,20 @@ trans_fun([{label,B},{label,_},
 	   {func_info,M,F,A},{label,L}|Instructions], Env) ->
   trans_fun([{label,B},{func_info,M,F,A},{label,L}|Instructions], Env);
 trans_fun([{label,B},
-	   {line,_},
+	   {line,Loc},
 	   {func_info,{atom,_M},{atom,_F},_A},
 	   {label,L}|Instructions], Env) ->
   %% Emit code to handle function_clause errors.  The BEAM test instructions
   %% branch to this label if they fail during function clause selection.
   %% Obviously, we must goto past this error point on normal entry.
   Begin = mk_label(B),
+  Line = mk_line(Loc, Env),
   V = mk_var(new),
   EntryPt = mk_label(L),
   Goto = hipe_icode:mk_goto(hipe_icode:label_name(EntryPt)),
   Mov = hipe_icode:mk_move(V, hipe_icode:mk_const(function_clause)),
   Fail = hipe_icode:mk_fail([V],error),
-  [Goto, Begin, Mov, Fail, EntryPt | trans_fun(Instructions, Env)];
+  [Line, Goto, Begin, Line, Mov, Fail, EntryPt | trans_fun(Instructions, Env)];
 %%--- label ---
 trans_fun([{label,L1},{label,L2}|Instructions], Env) ->
   %% Old BEAM code can have two consecutive labels.
@@ -1099,8 +1100,8 @@ trans_fun([{trim,N,NY}|Instructions], Env) ->
 %%--------------------------------------------------------------------
 %% line instruction added in Fall 2012 (R15).
 %%--------------------------------------------------------------------
-trans_fun([{line,_}|Instructions], Env) ->
-  trans_fun(Instructions,Env);
+trans_fun([{line,Loc}|Instructions], Env) ->
+  [mk_line(Loc, Env) | trans_fun(Instructions,Env)];
 %%--------------------------------------------------------------------
 %% Map instructions added in Spring 2014 (17.0).
 %%--------------------------------------------------------------------
@@ -2136,6 +2137,22 @@ mk_label(new) ->
 
 map_label(L) ->
   L bsl 1.  % faster and more type-friendly version of 2 * L
+
+%%-----------------------------------------------------------------------
+%% Make an icode line instruction
+%%-----------------------------------------------------------------------
+
+mk_line([], _Env) -> hipe_icode:mk_line(0);
+mk_line([{location, File, Line}], Env) ->
+  {M,_,_} = env__get_mfa(Env),
+  Loc = case atom_to_list(M) ++ ".erl" of
+	  File -> Line;
+	  _ ->
+	    %% BEAM truncates to 255 at load time to fit in atom table;
+	    %% replicate that behaviour here
+	    {list_to_atom(string:substr(File, 1, 255)), Line}
+	end,
+  hipe_icode:mk_line(Loc).
 
 %%-----------------------------------------------------------------------
 %% Returns the type of the given variables.

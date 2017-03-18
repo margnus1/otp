@@ -163,6 +163,7 @@
 	     hipe_rtl_liveness,
 	     hipe_rtl_mk_switch,
 	     hipe_rtl_primops,
+	     hipe_rtl_propagate_line,
 	     hipe_rtl_ssa,
 	     hipe_rtl_ssa_const_prop,
 	     hipe_rtl_ssa_avail_expr,

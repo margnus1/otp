@@ -123,7 +123,8 @@ conv_insn(I, Map, Data) ->
       I2 = conv_call(Dsts, Fun, Args,
 		     hipe_rtl:call_continuation(I),
 		     hipe_rtl:call_fail(I),
-		     hipe_rtl:call_type(I)),
+		     hipe_rtl:call_type(I),
+		     hipe_rtl:call_loc(I)),
       {FixArgs++I2, Map2, Data};
     #comment{} ->
       I2 = [hipe_x86:mk_comment(hipe_rtl:comment_text(I))],
@@ -497,26 +498,26 @@ move_formals([{Dst,Src}|Formals], Rest) ->
 
 %%% Finalise the conversion of a call instruction.
 
-conv_call(Dsts, Fun, Args, ContLab, ExnLab, Linkage) ->
+conv_call(Dsts, Fun, Args, ContLab, ExnLab, Linkage, Loc) ->
   case hipe_x86:is_prim(Fun) of
     true ->
-      conv_primop_call(Dsts, Fun, Args, ContLab, ExnLab, Linkage);
+      conv_primop_call(Dsts, Fun, Args, ContLab, ExnLab, Linkage, Loc);
     false ->
-      conv_general_call(Dsts, Fun, Args, ContLab, ExnLab, Linkage)
+      conv_general_call(Dsts, Fun, Args, ContLab, ExnLab, Linkage, Loc)
   end.
 
-conv_primop_call(Dsts, Prim, Args, ContLab, ExnLab, Linkage) ->
+conv_primop_call(Dsts, Prim, Args, ContLab, ExnLab, Linkage, Loc) ->
   case hipe_x86:prim_prim(Prim) of
     'fwait' ->
       conv_fwait_call(Dsts, Args, ContLab, ExnLab, Linkage);
     _ ->
-      conv_general_call(Dsts, Prim, Args, ContLab, ExnLab, Linkage)
+      conv_general_call(Dsts, Prim, Args, ContLab, ExnLab, Linkage, Loc)
   end.
 
 conv_fwait_call([], [], [], [], not_remote) ->
   [hipe_x86:mk_fp_unop('fwait', [])].
 
-conv_general_call(Dsts, Fun, Args, ContLab, ExnLab, Linkage) ->
+conv_general_call(Dsts, Fun, Args, ContLab, ExnLab, Linkage, Loc) ->
   %% The backend does not support pseudo_calls without a
   %% continuation label, so we make sure each call has one.
   {RealContLab, Tail} =
@@ -557,7 +558,7 @@ conv_general_call(Dsts, Fun, Args, ContLab, ExnLab, Linkage) ->
 	      [hipe_x86:mk_jmp_label(ContLab)]]}
 	end
     end,
-  SDesc = hipe_x86:mk_sdesc(ExnLab, 0, length(Args), {}),
+  SDesc = hipe_x86:mk_sdesc(ExnLab, 0, length(Args), {}, Loc),
   CallInsn = hipe_x86:mk_pseudo_call(Fun, SDesc, RealContLab, Linkage),
   {RegArgs,StkArgs} = split_args(Args),
   do_push_args(StkArgs, move_actuals(RegArgs, [CallInsn | Tail])).

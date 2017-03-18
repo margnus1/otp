@@ -55,7 +55,7 @@ init(Rtl) ->
 %% @spec is_comment(hipe_rtl:rtl_instruction()) -> boolean()
 %% @doc  Succeeds if Instr has no effect.
 is_comment(Instr) ->
-  hipe_rtl:is_comment(Instr).
+  hipe_rtl:is_comment(Instr) orelse hipe_rtl:is_line(Instr).
 
 %% @spec is_goto(hipe_rtl:rtl_instruction()) -> boolean()
 %% @doc  Succeeds if Instr is just a jump (no side-effects).

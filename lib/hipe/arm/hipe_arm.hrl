@@ -20,7 +20,7 @@
 %%% type	::= tagged | untagged
 %%% allocatable	::= true | false
 %%%
-%%% sdesc	::= #arm_sdesc{exnlab, fsize, arity, live}
+%%% sdesc	::= #arm_sdesc{exnlab, fsize, arity, live, loc}
 %%% exnlab	::= [] | label
 %%% fsize	::= int32		(frame size in words)
 %%% live	::= <tuple of int32>	(word offsets)
@@ -31,7 +31,7 @@
 
 -record(arm_mfa, {m::atom(), f::atom(), a::arity()}).
 -record(arm_prim, {prim}).
--record(arm_sdesc, {exnlab, fsize, arity::arity(), live}).
+-record(arm_sdesc, {exnlab, fsize, arity::arity(), live, loc}).
 -record(arm_temp, {reg, type, allocatable}).
 
 %%% Instruction Operands:

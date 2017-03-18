@@ -168,10 +168,10 @@ do_pseudo_call_prepare(I, FPoff0) ->
   {adjust_sp(-Offset, []), FPoff0 + Offset}.
 
 do_pseudo_call(I, LiveOut, Context, FPoff0) ->
-  #sparc_sdesc{exnlab=ExnLab,arity=OrigArity} = hipe_sparc:pseudo_call_sdesc(I),
+  SDesc0 = #sparc_sdesc{arity=OrigArity} = hipe_sparc:pseudo_call_sdesc(I),
   FunV = hipe_sparc:pseudo_call_funv(I),
   LiveTemps = [Temp || Temp <- LiveOut, temp_is_pseudo(Temp)],
-  SDesc = mk_sdesc(ExnLab, Context, LiveTemps),
+  SDesc = update_sdesc(SDesc0, Context, LiveTemps),
   ContLab = hipe_sparc:pseudo_call_contlab(I),
   Linkage = hipe_sparc:pseudo_call_linkage(I),
   CallCode = [hipe_sparc:mk_pseudo_call(FunV, SDesc, ContLab, Linkage)],
@@ -198,13 +198,14 @@ stack_need_general(FPoff, StkArity) ->
 %%% Create stack descriptors for call sites.
 %%%
 
-mk_sdesc(ExnLab, Context, Temps) ->	% for normal calls
+update_sdesc(SDesc, Context, Temps) ->	% for normal calls
   Temps0 = only_tagged(Temps),
   Live = mk_live(Context, Temps0),
   Arity = context_arity(Context),
   FSize = context_framesize(Context),
-  hipe_sparc:mk_sdesc(ExnLab, (FSize div word_size())-1, Arity,
-		      list_to_tuple(Live)).
+  SDesc#sparc_sdesc{fsize = (FSize div word_size())-1,
+		    arity = Arity,
+		    live = list_to_tuple(Live)}.
 
 only_tagged(Temps)->
   [X || X <- Temps, hipe_sparc:temp_type(X) =:= 'tagged'].
@@ -217,7 +218,7 @@ temp_to_slot(Context, Temp) ->
     div word_size().
 
 mk_minimal_sdesc(Context) ->		% for inc_stack_0 calls
-  hipe_sparc:mk_sdesc([], 0, context_arity(Context), {}).
+  hipe_sparc:mk_sdesc([], 0, context_arity(Context), {}, 0).
 
 %%%
 %%% Tailcalls.

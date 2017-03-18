@@ -20,7 +20,7 @@
 %%% type	::= tagged | untagged | double
 %%% allocatable	::= true | false
 %%%
-%%% sdesc	::= #sparc_sdesc{exnlab, fsize, arity, live}
+%%% sdesc	::= #sparc_sdesc{exnlab, fsize, arity, live, loc}
 %%% exnlab	::= [] | label
 %%% fsize	::= int32		(frame size in words)
 %%% live	::= <tuple of int32>	(word offsets)
@@ -31,7 +31,7 @@
 
 -record(sparc_mfa, {m::atom(), f::atom(), a::arity()}).
 -record(sparc_prim, {prim}).
--record(sparc_sdesc, {exnlab, fsize, arity::arity(), live}).
+-record(sparc_sdesc, {exnlab, fsize, arity::arity(), live, loc}).
 -record(sparc_temp, {reg, type, allocatable}).
 -record(sparc_simm13, {value}).
 -record(sparc_uimm5, {value}).

@@ -786,18 +786,19 @@ conv_call(I, Map, Data) ->
   ContLab = hipe_rtl:call_continuation(I),
   ExnLab = hipe_rtl:call_fail(I),
   Linkage = hipe_rtl:call_type(I),
-  I2 = mk_call(Dsts, Fun, Args, ContLab, ExnLab, Linkage),
+  Loc = hipe_rtl:call_loc(I),
+  I2 = mk_call(Dsts, Fun, Args, ContLab, ExnLab, Linkage, Loc),
   {I2, Map2, Data}.
 
-mk_call(Dsts, Fun, Args, ContLab, ExnLab, Linkage) ->
+mk_call(Dsts, Fun, Args, ContLab, ExnLab, Linkage, Loc) ->
   case hipe_ppc:is_prim(Fun) of
     true ->
-      mk_primop_call(Dsts, Fun, Args, ContLab, ExnLab, Linkage);
+      mk_primop_call(Dsts, Fun, Args, ContLab, ExnLab, Linkage, Loc);
     false ->
-      mk_general_call(Dsts, Fun, Args, ContLab, ExnLab, Linkage)
+      mk_general_call(Dsts, Fun, Args, ContLab, ExnLab, Linkage, Loc)
   end.
 
-mk_primop_call(Dsts, Prim, Args, ContLab, ExnLab, Linkage) ->
+mk_primop_call(Dsts, Prim, Args, ContLab, ExnLab, Linkage, Loc) ->
   case hipe_ppc:prim_prim(Prim) of
     'extsh' ->
       mk_extsh_call(Dsts, Args, ContLab, ExnLab, Linkage);
@@ -806,7 +807,7 @@ mk_primop_call(Dsts, Prim, Args, ContLab, ExnLab, Linkage) ->
     'lwbrx' ->
       mk_lwbrx_call(Dsts, Args, ContLab, ExnLab, Linkage);
     _ ->
-      mk_general_call(Dsts, Prim, Args, ContLab, ExnLab, Linkage)
+      mk_general_call(Dsts, Prim, Args, ContLab, ExnLab, Linkage, Loc)
   end.
 
 mk_extsh_call([Dst], [Src], [], [], not_remote) ->
@@ -833,7 +834,7 @@ mk_loadx(LdxOp, Dst, Base, Offset) ->
     end,
   FixOff ++ [hipe_ppc:mk_loadx(LdxOp, Dst, Base, NewOff)].
 
-mk_general_call(Dsts, Fun, Args, ContLab, ExnLab, Linkage) ->
+mk_general_call(Dsts, Fun, Args, ContLab, ExnLab, Linkage, Loc) ->
   %% The backend does not support pseudo_calls without a
   %% continuation label, so we make sure each call has one.
   {RealContLab, Tail} =
@@ -870,7 +871,7 @@ mk_general_call(Dsts, Fun, Args, ContLab, ExnLab, Linkage) ->
 	      [hipe_ppc:mk_b_label(ContLab)]]}
 	end
     end,
-  SDesc = hipe_ppc:mk_sdesc(ExnLab, 0, length(Args), {}),
+  SDesc = hipe_ppc:mk_sdesc(ExnLab, 0, length(Args), {}, Loc),
   {FixFunC,FunC} = fix_func(Fun),
   CallInsn = hipe_ppc:mk_pseudo_call(FunC, SDesc, RealContLab, Linkage),
   {RegArgs,StkArgs} = split_args(Args),

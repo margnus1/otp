@@ -49,7 +49,7 @@
 %%%
 %%% jtab	::= label	(equiv. to {x86_imm,{label,'constant'}})
 %%%
-%%% sdesc	::= {x86_sdesc, exnlab, fsize, arity, live}
+%%% sdesc	::= {x86_sdesc, exnlab, fsize, arity, live, loc}
 %%% exnlab	::= [] | label
 %%% fsize	::= <int32>		(frame size in words)
 %%% live	::= <tuple of int32>	(word offsets)
@@ -61,7 +61,7 @@
 -record(x86_fpreg, {reg, pseudo}).
 -record(x86_mfa, {m::atom(), f::atom(), a::arity()}).
 -record(x86_prim, {prim}).
--record(x86_sdesc, {exnlab, fsize, arity::arity(), live::tuple()}).
+-record(x86_sdesc, {exnlab, fsize, arity::arity(), live::tuple(), loc}).
 
 %%% Basic instructions.
 %%% These follow the AT&T convention, i.e. op src,dst (dst := dst op src)

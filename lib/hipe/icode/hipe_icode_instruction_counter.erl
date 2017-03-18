@@ -114,7 +114,8 @@ counter__insn_get_key(#icode_begin_try{}) -> begin_try;
 counter__insn_get_key(#icode_end_try{}) -> end_try;
 counter__insn_get_key(#icode_begin_handler{}) -> begin_handler;
 counter__insn_get_key(#icode_fail{}) -> fail;
-counter__insn_get_key(#icode_comment{}) -> comment.
+counter__insn_get_key(#icode_comment{}) -> comment;
+counter__insn_get_key(#icode_line{}) -> line.
 
 counter__increase_key(Key, Info) ->
   NewCounter = 

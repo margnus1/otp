@@ -225,11 +225,11 @@ adjust_sp(N, Rest) ->
 %%%
 
 do_pseudo_call(I, LiveOut, Context, FPoff0) ->
-  #x86_sdesc{exnlab=ExnLab,arity=OrigArity} = hipe_x86:pseudo_call_sdesc(I),
+  SDesc0 = #x86_sdesc{arity=OrigArity} = hipe_x86:pseudo_call_sdesc(I),
   Fun0 = hipe_x86:pseudo_call_fun(I),
   Fun1 = conv_opnd(Fun0, FPoff0, Context),
   LiveTemps = [Temp || Temp <- LiveOut, temp_is_pseudo(Temp)],
-  SDesc = mk_sdesc(ExnLab, Context, LiveTemps),
+  SDesc = update_sdesc(SDesc0, Context, LiveTemps),
   ContLab = hipe_x86:pseudo_call_contlab(I),
   Linkage = hipe_x86:pseudo_call_linkage(I),
   CallCode = [hipe_x86:mk_pseudo_call(Fun1, SDesc, ContLab, Linkage)],
@@ -259,13 +259,14 @@ stack_need_general(FPoff, StkArity) ->
 %%% Create stack descriptors for call sites.
 %%%
 
-mk_sdesc(ExnLab, Context, Temps) ->	% for normal calls
+update_sdesc(SDesc, Context, Temps) ->	% for normal calls
   Temps0 = only_tagged(Temps),
   Live = mk_live(Context, Temps0),
   Arity = context_arity(Context),
   FSize = context_framesize(Context),
-  hipe_x86:mk_sdesc(ExnLab, FSize div word_size(), Arity,
-                    list_to_tuple(Live)).
+  SDesc#x86_sdesc{fsize = FSize div word_size(),
+		  arity = Arity,
+		  live = list_to_tuple(Live)}.
 
 only_tagged(Temps)->
   [X || X <- Temps, hipe_x86:temp_type(X) =:= 'tagged'].
@@ -278,7 +279,7 @@ temp_to_slot(Context, Temp) ->
     div word_size().
 
 mk_minimal_sdesc(Context) ->		% for inc_stack_0 calls
-  hipe_x86:mk_sdesc([], 0, context_arity(Context), {}).
+  hipe_x86:mk_sdesc([], 0, context_arity(Context), {}, 0).
 
 %%%
 %%% Tailcalls.

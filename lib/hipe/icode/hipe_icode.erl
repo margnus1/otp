@@ -510,6 +510,7 @@
 	 mk_label/1,             %% mk_label(Name)
 	 mk_new_label/0,         %% mk_new_label()
 	 mk_comment/1,           %% mk_comment(Text)
+	 mk_line/1,              %% mk_line(Loc)
 	 mk_const/1,             %% mk_const(Const)
 	 mk_var/1,               %% mk_var(Id)
 	 annotate_variable/2,  %% annotate_var_or_reg(VarOrReg, Type)
@@ -536,6 +537,7 @@
 	 is_goto/1,
 	 is_label/1,
 	 is_comment/1,
+	 is_line/1,
 	 is_const/1,
 	 is_var/1,
 	 is_fvar/1,
@@ -565,6 +567,7 @@
 	 begin_handler_dstlist/1,
 	 label_name/1,
 	 comment_text/1,
+	 line_loc/1,
 	 return_vars/1,
 	 fail_args/1,
 	 fail_class/1,
@@ -603,7 +606,7 @@
 %% Exported types
 %%
 
--export_type([icode/0, params/0]).
+-export_type([icode/0, params/0, line_loc/0]).
 
 -type params() :: [icode_var()].
 
@@ -1224,6 +1227,20 @@ comment_text(#icode_comment{text=Txt}) -> Txt.
 is_comment(#icode_comment{}) -> true;
 is_comment(_) -> false.
 
+%%---------
+%% line
+%%---------
+
+-spec mk_line(line_loc()) -> #icode_line{}.
+mk_line(Loc) -> #icode_line{loc=Loc}.
+
+-spec line_loc(#icode_line{}) -> line_loc().
+line_loc(#icode_line{loc=Loc}) -> Loc.
+
+-spec is_line(icode_instr()) -> boolean().
+is_line(#icode_line{}) -> true;
+is_line(_) -> false.
+
 
 %%---------------------------------------------------------------------
 %% Arguments (variables and constants)
@@ -1336,6 +1353,7 @@ args(I) ->
     #icode_begin_handler{} -> [];
     #icode_end_try{} -> [];
     #icode_comment{} -> [];
+    #icode_line{} -> [];
     #icode_label{} -> []
   end.
 
@@ -1357,6 +1375,7 @@ defines(I) ->
     #icode_begin_try{} -> [];
     #icode_end_try{} -> [];
     #icode_comment{} -> [];
+    #icode_line{} -> [];
     #icode_label{} -> []
   end.
 
@@ -1400,6 +1419,7 @@ subst_uses(Subst, I) ->
     #icode_begin_handler{} -> I;
     #icode_end_try{} -> I;
     #icode_comment{} -> I;
+    #icode_line{} -> I;
     #icode_label{} -> I
   end.
 
@@ -1425,6 +1445,7 @@ subst_defines(Subst, I) ->
     #icode_begin_try{} -> I;
     #icode_end_try{} -> I;
     #icode_comment{} -> I;
+    #icode_line{} -> I;
     #icode_label{} -> I
   end.
 
@@ -1469,6 +1490,7 @@ successors(I) ->
     #icode_enter{} -> [];
     #icode_return{} -> [];
     #icode_comment{} -> [];
+    #icode_line{} -> [];
     %% the following are included here for handling linear code
     #icode_move{} -> [];
     #icode_begin_handler{} -> []
@@ -1647,6 +1669,7 @@ is_branch(Instr) ->
     #icode_begin_handler{} -> false;
     #icode_end_try{} -> false;
     #icode_comment{} -> false;
+    #icode_line{} -> false;
     #icode_label{} -> false;
     #icode_phi{} -> false
   end.
@@ -1757,6 +1780,7 @@ is_safe(Instr) ->
     %% Internal auxiliary instructions that should not be removed
     %% unless you really know what you are doing.
     #icode_comment{} -> false;
+    #icode_line{} -> false;
     #icode_begin_try{} -> false;
     #icode_end_try{} -> false
   end.

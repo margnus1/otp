@@ -715,6 +715,7 @@ handle_unchecked_end(Succ, Code, InBlock) ->
 instr_allowed_in_fp_ebb(Instr) ->
   case Instr of
     #icode_comment{} -> true;
+    #icode_line{} -> true;
     #icode_goto{} -> true;
     #icode_if{} -> true;
     #icode_move{} -> true;

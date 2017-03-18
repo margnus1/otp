@@ -228,11 +228,12 @@ pp_move64(_Dev, I) -> exit({?MODULE, I}).
 to_hex(N) ->
   io_lib:format("~.16x", [N, "0x"]).
 
-pp_sdesc(Dev, Pre, #x86_sdesc{exnlab=ExnLab,fsize=FSize,arity=Arity,live=Live}) ->
+pp_sdesc(Dev, Pre, #x86_sdesc{exnlab=ExnLab,fsize=FSize,arity=Arity,live=Live,
+			      loc=Loc}) ->
   pp_sdesc_exnlab(Dev, Pre, ExnLab),
   io:format(Dev, " ~s ~w [", [to_hex(FSize), Arity]),
   pp_sdesc_live(Dev, Live),
-  io:format(Dev, "]", []).
+  io:format(Dev, "] ~w", [Loc]).
 
 pp_sdesc_exnlab(Dev, _, []) -> io:format(Dev, " []", []);
 pp_sdesc_exnlab(Dev, Pre, ExnLab) -> io:format(Dev, " .~s_~w", [Pre, ExnLab]).

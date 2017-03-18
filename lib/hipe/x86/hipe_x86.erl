@@ -51,7 +51,7 @@
 	 is_prim/1,
 	 prim_prim/1,
 
-	 mk_sdesc/4,
+	 mk_sdesc/5,
 
 	 %% insn_type/1,
 
@@ -259,8 +259,8 @@ mk_prim(Prim) -> #x86_prim{prim=Prim}.
 is_prim(X) -> case X of #x86_prim{} -> true; _ -> false end.
 prim_prim(#x86_prim{prim=Prim}) -> Prim.
 
-mk_sdesc(ExnLab, FSize, Arity, Live) ->
-    #x86_sdesc{exnlab=ExnLab, fsize=FSize, arity=Arity, live=Live}.
+mk_sdesc(ExnLab, FSize, Arity, Live, Loc) ->
+    #x86_sdesc{exnlab=ExnLab, fsize=FSize, arity=Arity, live=Live, loc=Loc}.
 
 insn_type(Insn) ->
     element(1, Insn).

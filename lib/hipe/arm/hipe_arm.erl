@@ -29,7 +29,7 @@
 	 is_prim/1,
 	 prim_prim/1,
 
-	 mk_sdesc/4,
+	 mk_sdesc/5,
 
 	 mk_am2/3,
 	 mk_am3/3,
@@ -157,8 +157,8 @@ mk_blx(Src, SDesc) -> #blx{src=Src, sdesc=SDesc}.
 
 mk_cmp(CmpOp, Src, Am1) -> #cmp{cmpop=CmpOp, src=Src, am1=Am1}.
 
-mk_sdesc(ExnLab, FSize, Arity, Live) ->
-  #arm_sdesc{exnlab=ExnLab, fsize=FSize, arity=Arity, live=Live}.
+mk_sdesc(ExnLab, FSize, Arity, Live, Loc) ->
+  #arm_sdesc{exnlab=ExnLab, fsize=FSize, arity=Arity, live=Live, loc=Loc}.
 
 mk_comment(Term) -> #comment{term=Term}.
 

@@ -392,25 +392,26 @@ icode_to_rtl(MFA, Icode, Options, Servers) ->
   RtlCfg  = initialize_rtl_cfg(LinearRTL, Options),
   %% hipe_rtl_cfg:pp(RtlCfg),
   RtlCfg0 = hipe_rtl_cfg:remove_unreachable_code(RtlCfg),
-  RtlCfg1 = hipe_rtl_cfg:remove_trivial_bbs(RtlCfg0),
+  RtlCfg1 = hipe_rtl_propagate_line:propagate(RtlCfg0),
+  RtlCfg2 = hipe_rtl_cfg:remove_trivial_bbs(RtlCfg1),
   %% hipe_rtl_cfg:pp(RtlCfg1),
-  RtlCfg2 = rtl_ssa(RtlCfg1, Options),
-  RtlCfg3 = rtl_symbolic(RtlCfg2, Options),
+  RtlCfg3 = rtl_ssa(RtlCfg2, Options),
+  RtlCfg4 = rtl_symbolic(RtlCfg3, Options),
   %% hipe_rtl_cfg:pp(RtlCfg3),
-  pp(RtlCfg3, MFA, rtl_liveness, pp_rtl_liveness, Options, Servers),
-  RtlCfg4 = rtl_lcm(RtlCfg3, Options),
+  pp(RtlCfg4, MFA, rtl_liveness, pp_rtl_liveness, Options, Servers),
+  RtlCfg5 = rtl_lcm(RtlCfg4, Options),
   %% LLVM: A liveness analysis on RTL must be performed in order to find the GC
   %% roots and explicitly mark them (in RTL) when they go out of scope (only
   %% when the LLVM backend is used).
-  {RtlCfg5, Roots} =
+  {RtlCfg6, Roots} =
     case proplists:get_bool(to_llvm, Options) of
       false ->
-        {RtlCfg4, []};
+        {RtlCfg5, []};
       true ->
-        hipe_llvm_liveness:analyze(RtlCfg4)
+        hipe_llvm_liveness:analyze(RtlCfg5)
     end,
-  pp(RtlCfg5, MFA, rtl, pp_rtl, Options, Servers),
-  LinearRTL1 = hipe_rtl_cfg:linearize(RtlCfg5),
+  pp(RtlCfg6, MFA, rtl, pp_rtl, Options, Servers),
+  LinearRTL1 = hipe_rtl_cfg:linearize(RtlCfg6),
   LinearRTL2 = hipe_rtl_cleanup_const:cleanup(LinearRTL1),
   %% hipe_rtl:pp(standard_io, LinearRTL2),
   {LinearRTL2, Roots}.

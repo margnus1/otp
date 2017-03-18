@@ -23,7 +23,7 @@
 -record(alu, {dst, src1, op, src2}).
 -record(alub, {dst, src1, op, src2, 'cond', true_label, false_label, p}).
 -record(call, {dstlist, 'fun', arglist, type, continuation,
-    failcontinuation, normalcontinuation = []}).
+    failcontinuation, normalcontinuation = [], loc = 0}).
 -record(comment, {text}).
 -record(enter, {'fun', arglist, type}).
 -record(fconv, {dst, src}).
@@ -37,6 +37,7 @@
 -record(goto, {label}).
 -record(goto_index, {block, index, labels}).
 -record(label, {name}).
+-record(line, {loc}).
 -record(load, {dst, src, offset, size, sign}).
 -record(load_address, {dst, addr, type}).
 -record(load_atom, {dst, atom}).

@@ -122,6 +122,8 @@ translate_instruction(I, VarMap, ConstTab, Options) ->
       gen_if(I, VarMap, ConstTab);
     #icode_label{} ->
       gen_label(I, VarMap, ConstTab);
+    #icode_line{} ->
+      gen_line(I, VarMap, ConstTab);
     #icode_move{} ->  
       gen_move(I, VarMap, ConstTab);
     #icode_begin_handler{} ->
@@ -133,9 +135,7 @@ translate_instruction(I, VarMap, ConstTab, Options) ->
     #icode_switch_tuple_arity{} -> 
       gen_switch_tuple(I, VarMap, ConstTab, Options);
     #icode_type{} -> 
-      gen_type(I, VarMap, ConstTab);
-    X ->
-      exit({?MODULE,{"unknown Icode instruction",X}})
+      gen_type(I, VarMap, ConstTab)
   end.
 
 %%-------------------------------------------------------------------------
@@ -298,6 +298,17 @@ gen_label(I, VarMap, ConstTab) ->
   LabelName = hipe_icode:label_name(I),
   {NewLabel,Map0} = hipe_rtl_varmap:icode_label2rtl_label(LabelName, VarMap),
   {NewLabel,Map0,ConstTab}.
+
+%% --------------------------------------------------------------------
+
+%%
+%% LINE
+%%
+
+gen_line(I, VarMap, ConstTab) ->
+  Loc = hipe_icode:line_loc(I),
+  NewLine = hipe_rtl:mk_line(Loc),
+  {NewLine,VarMap,ConstTab}.
 
 %% --------------------------------------------------------------------
 
