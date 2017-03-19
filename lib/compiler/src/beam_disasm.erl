@@ -323,7 +323,7 @@ get_funs({LsR0,[{func_info,[{atom,M}=AtomM,{atom,F}=AtomF,ArityArg]}|Code0]})
 
 get_fun([{func_info,_}|_]=Is, R0) ->
     {LsR,R} = labels_r(R0, []),
-    {LsR,lists:reverse(R),Is};
+    {lists:reverse(LsR),lists:reverse(R),Is};
 get_fun([{int_code_end,[]}], R) ->
     {[],lists:reverse(R),[]};
 get_fun([I|Is], R) ->

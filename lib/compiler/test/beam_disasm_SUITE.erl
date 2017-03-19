@@ -24,12 +24,12 @@
 -export([all/0, suite/0,groups/0,init_per_suite/1, end_per_suite/1,
 	 init_per_group/2,end_per_group/2]).
 
--export([stripped/1]).
+-export([stripped/1,starts_with_label/1]).
 
 suite() -> [{ct_hooks,[ts_install_cth]}].
 
 all() ->
-    [stripped].
+    [stripped, starts_with_label].
 
 groups() ->
     [].
@@ -63,3 +63,18 @@ stripped(Config) when is_list(Config) ->
     {beam_file, tmp, _, [], [], [_|_]} =
 	beam_disasm:file(BeamName),
     ok.
+
+%% Check that all disassembled functions start with {label,_}.
+starts_with_label(Config) when is_list(Config) ->
+    PrivDir = proplists:get_value(priv_dir, Config),
+    SrcName = filename:join(PrivDir, "tmp.erl"),
+    Prog = <<"-module(tmp).\n-export([tmp/0]).\ntmp()->ok.\n">>,
+    ok = file:write_file(SrcName, Prog),
+    {ok, tmp, Binary} =
+	compile:file(SrcName, [binary]),
+    {beam_file, tmp, _, _, _, Funs} =
+	beam_disasm:file(Binary),
+    lists:foreach(fun check_fun/1, Funs),
+    ok.
+
+check_fun({function, _Name, _Arity, _Entry, [{label,_}|_]}) -> ok.
