@@ -7,6 +7,9 @@
 -include("hipe_llvm_arch.hrl").
 -include("elf_format.hrl").
 
+%% Where to put temporary files
+-define(TMPDIR, "/tmp").
+
 %% @doc Translation of RTL to a loadable object. This function takes the RTL
 %%      code and calls hipe_rtl_to_llvm:translate/2 to translate the RTL code to
 %%      LLVM code. After this, LLVM asm is printed to a file and the LLVM tool
@@ -526,8 +529,8 @@ unique_folder(FunName, Arity, Options) ->
     case proplists:get_bool(llvm_save_temps, Options) of
       true ->  %% Store folder in current directory
         DirName;
-      false -> %% Temporarily store folder in tempfs (/dev/shm/)
-        "/dev/shm/" ++ DirName
+      false -> %% Temporarily store folder in tempfs (/tmp/)
+        ?TMPDIR ++ "/" ++ DirName
     end,
   %% Make sure it does not exist
   case dir_exists(Dir) of
