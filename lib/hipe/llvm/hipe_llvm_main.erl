@@ -88,7 +88,6 @@ compile_with_llvm(FunName, Arity, LLVMCode, Options, UseBuffer) ->
   %% Invoke LLVM compiler tools to produce an object file
   llvm_opt(Dir, Filename, Options),
   llvm_llc(Dir, Filename, Ver, Options),
-  compile(Dir, Filename, "gcc"), %%FIXME: use llc -filetype=obj and skip this!
   {ok, Dir, Dir ++ Filename ++ ".o"}.
 
 %% @doc Invoke opt tool to optimize the bitcode (_name.ll -> _name.bc).
@@ -113,7 +112,7 @@ llvm_llc(Dir, Filename, Ver, Options) ->
   Align    = find_stack_alignment(),
   Target   = llc_target_opt(),
   LlcFlags = [OptLevel, "-code-model=medium", "-stack-alignment=" ++ Align
-             , "-tailcallopt", "-filetype=asm" %FIXME
+             , "-tailcallopt", "-filetype=obj"
              , Target
              | VerFlags],
   Command  = "llc " ++ fix_opts(LlcFlags) ++ " " ++ Source,
@@ -121,19 +120,6 @@ llvm_llc(Dir, Filename, Ver, Options) ->
   case os:cmd(Command) of
     "" -> ok;
     Error -> exit({?MODULE, llc, Error})
-  end.
-
-%% @doc Invoke the compiler tool ("gcc", "llvmc", etc.) to generate an object
-%%      file from native assembly.
-compile(Dir, Fun_Name, Compiler) ->
-  Source  = Dir ++ Fun_Name ++ ".s",
-  Dest    = Dir ++ Fun_Name ++ ".o",
-  Target  = compiler_target_opt(),
-  Command = Compiler ++ " " ++ Target ++ " -c " ++ Source ++ " -o " ++ Dest,
-  %% io:format("~s: ~s~n", [Compiler, Command]),
-  case os:cmd(Command) of
-    "" -> ok;
-    Error -> exit({?MODULE, cc, Error})
   end.
 
 find_stack_alignment() ->
@@ -147,12 +133,6 @@ llc_target_opt() ->
   case get(hipe_target_arch) of
     x86 -> "-march=x86";
     amd64 -> "-march=x86-64"
-  end.
-
-compiler_target_opt() ->
-  case get(hipe_target_arch) of
-    x86 -> "-m32";
-    amd64 -> "-m64"
   end.
 
 %% @doc Join options.
