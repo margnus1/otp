@@ -53,7 +53,8 @@
 -export([test_subbinary/3, test_heap_binary/3]).
 -export([create_heap_binary/3, create_refc_binary/3, create_refc_binary/4]).
 -export([create_matchstate/6, convert_matchstate/1, compare_matchstate/4]).
--export([get_field_from_term/3, get_field_from_pointer/3,
+-export([get_field_addr_from_term/3,
+	 get_field_from_term/3, get_field_from_pointer/3,
 	 set_field_from_term/3, set_field_from_pointer/3,
 	 extract_matchbuffer/2, extract_binary_bytes/2]).
 
@@ -175,8 +176,8 @@ untag_ptr(X, Tag) ->
     0 ->
       {X, -Tag, []};
     1 ->
-      Base = hipe_rtl:mk_new_reg_gcunsafe(),
-      Untag = ptr_val(Res, X),
+      Base = hipe_rtl:mk_new_reg(),
+      Untag = ptr_val(Base, X),
       {Base, 0, Untag}
   end.
 
@@ -186,7 +187,7 @@ untag_ptr_nooffset(Dst, X, Tag) ->
   %% architectures.
   case ?ERTS_USE_LITERAL_TAG of
     0 ->
-      hipe_rtl:mk_alu(Dst, X, 'sub', hipe_rtl:mk_imm(Tag))
+      hipe_rtl:mk_alu(Dst, X, 'sub', hipe_rtl:mk_imm(Tag));
     1 ->
       ptr_val(Dst, X)
   end.
@@ -208,7 +209,7 @@ test_is_boxed(X, TrueLab, FalseLab, Pred) ->
 
 get_header(Res, X) ->
   {Base, Offset, Untag} = untag_ptr(X, ?TAG_PRIMARY_BOXED),
-  [Untag, hipe_rtl:mk_load(Res, X, hipe_rtl:mk_imm(Offset))].
+  [Untag, hipe_rtl:mk_load(Res, Base, hipe_rtl:mk_imm(Offset))].
 
 mask_and_compare(X, Mask, Value, TrueLab, FalseLab, Pred) ->
   Tmp = hipe_rtl:mk_new_reg_gcsafe(),
@@ -672,7 +673,7 @@ unsafe_update_element(Tuple, Index, Value) ->   % Index is an immediate
   WordSize = hipe_rtl_arch:word_size(),
   {Base, Offset0, Untag} = untag_ptr(Tuple, ?TAG_PRIMARY_BOXED),
   Offset = Offset0 + WordSize * hipe_rtl:imm_value(Index),
-  hipe_rtl:mk_store(Base, hipe_rtl:mk_imm(Offset), Value).
+  [Untag, hipe_rtl:mk_store(Base, hipe_rtl:mk_imm(Offset), Value)].
 
 %%% wrong semantics
 %% unsafe_variable_element(Dst, Index, Tuple) -> % Index is an unknown fixnum
@@ -703,7 +704,7 @@ element(Dst, Index, Tuple, FailLabName, {tuple, A}, IndexInfo) ->
       Offset = hipe_rtl:mk_new_reg_gcsafe(),
       Ptr = hipe_rtl:mk_new_reg(), % offset from Tuple
       [untag_fixnum(UIndex, Index),
-       ptr_untag_nooffset(Ptr, Tuple, ?TAG_PRIMARY_BOXED),
+       untag_ptr_nooffset(Ptr, Tuple, ?TAG_PRIMARY_BOXED),
        hipe_rtl:mk_alu(Offset, UIndex, 'sll', 
 		       hipe_rtl:mk_imm(hipe_rtl_arch:log2_word_size())),
        hipe_rtl:mk_load(Dst, Ptr, Offset)];
@@ -812,7 +813,7 @@ gen_element_tail(Dst, Tuple, Arity, UIndex, FailLabName, IndexOkLab) ->
    hipe_rtl:mk_branch(ZeroIndex, 'geu', Arity, FailLabName,
 		      hipe_rtl:label_name(IndexOkLab), 0.01),
    IndexOkLab,
-   ptr_untag_nooffset(Ptr, Tuple, ?TAG_PRIMARY_BOXED),
+   untag_ptr_nooffset(Ptr, Tuple, ?TAG_PRIMARY_BOXED),
    hipe_rtl:mk_alu(Offset, UIndex, 'sll',
                    hipe_rtl:mk_imm(hipe_rtl_arch:log2_word_size())),
    hipe_rtl:mk_load(Dst, Ptr, Offset)].
@@ -850,6 +851,7 @@ if_fun_get_arity_and_address(ArityReg, AddressReg, FunP, BadFunLab, Pred) ->
   GetArityCode =
     [TrueLab0,
      %% Funp->arity contains the arity
+     Untag,
      hipe_rtl:mk_load(ArityReg, Base,
 		      hipe_rtl:mk_imm(Offset+?EFT_ARITY)),
      hipe_rtl:mk_load(FEPtrReg, Base,
@@ -1089,7 +1091,7 @@ create_matchstate(Max, BinSize, Base, Offset, Orig, Ms) ->
   SizeInWords = ((ByteSize div WordSize) - 1),
   Header = hipe_rtl:mk_imm(mk_header(SizeInWords, ?TAG_HEADER_BIN_MATCHSTATE)),
   [GetHPInsn,
-   hipe_rtl:mk_alu(Ms, HP, add, hipe_rtl:mk_imm(?TAG_PRIMARY_BOXED)),
+   tag_boxed(Ms, HP),
    set_field_from_term({matchstate,thing_word}, Ms, Header),
    set_field_from_term({matchstate,{matchbuffer,orig}}, Ms, Orig),
    set_field_from_term({matchstate,{matchbuffer,base}}, Ms, Base),
@@ -1261,6 +1263,11 @@ get_field_size1({matchbuffer, base}) ->
 get_field_size1({matchbuffer, binsize}) ->  
   ?MB_SIZE_SIZE.
 
+get_field_addr_from_term(Struct, Term, Dst) ->
+  {Base, Offset0, Untag} = untag_ptr(Term, ?TAG_PRIMARY_BOXED),
+  Offset = hipe_rtl:mk_imm(get_field_offset(Struct) + Offset0),
+  [Untag, hipe_rtl:mk_alu(Dst, Base, add, Offset)].
+
 get_field_from_term(Struct, Term, Dst) ->
   {Base, Offset0, Untag} = untag_ptr(Term, ?TAG_PRIMARY_BOXED),
   Offset = hipe_rtl:mk_imm(get_field_offset(Struct) + Offset0),
@@ -1269,7 +1276,7 @@ get_field_from_term(Struct, Term, Dst) ->
 
 set_field_from_term(Struct, Term, Value) ->
   {Base, Offset0, Untag} = untag_ptr(Term, ?TAG_PRIMARY_BOXED),
-  Offset = hipe_rtl:mk_imm(get_field_offset(Struct) - Offset0),
+  Offset = hipe_rtl:mk_imm(get_field_offset(Struct) + Offset0),
   Size = get_field_size(Struct),
   [Untag, hipe_rtl:mk_store(Base, Offset, Value, Size)].
 
