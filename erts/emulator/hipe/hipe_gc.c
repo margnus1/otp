@@ -40,7 +40,7 @@ Eterm *fullsweep_nstack(Process *p, Eterm *n_htop)
     Eterm *nsp_end;
     const struct hipe_sdesc *sdesc;
     unsigned int sdesc_size;
-    unsigned long ra;
+    UWord ra;
     unsigned int i;
     unsigned int mask;
     /* arch-specific nstack walk state */
@@ -125,7 +125,7 @@ void gensweep_nstack(Process *p, Eterm **ptr_old_htop, Eterm **ptr_n_htop)
     Eterm *nsp_end;
     const struct hipe_sdesc *sdesc;
     unsigned int sdesc_size;
-    unsigned long ra;
+    UWord ra;
     unsigned int i;
     unsigned int mask;
     /* arch-specific nstack walk state */
@@ -263,7 +263,7 @@ Eterm *sweep_literals_nstack(Process *p, Eterm *old_htop, char *area,
     sdesc = nstack_walk_init_sdesc_ignore_trap(p, &walk_state);
 
     while (!nstack_walk_nsp_reached_end(nsp, nsp_end)) {
-	unsigned long ra;
+	UWord ra;
 	unsigned sdesc_size = nstack_walk_frame_size(sdesc);
 	unsigned i = 0;
 	unsigned mask = sdesc->livebits[0];
@@ -298,8 +298,8 @@ Eterm *sweep_literals_nstack(Process *p, Eterm *old_htop, char *area,
 		mask = sdesc->livebits[i >> 5];
 	}
 	ra = nstack_walk_frame_ra(nsp, sdesc);
-	if (ra == (unsigned long)nbif_stack_trap_ra)
-	    ra = (unsigned long)p->hipe.ngra;
+	if (ra == (UWord)nbif_stack_trap_ra)
+	    ra = (UWord)p->hipe.ngra;
 	sdesc = hipe_find_sdesc(ra);
 	nsp = nstack_walk_next_frame(nsp, sdesc_size);
     }
@@ -324,7 +324,7 @@ nstack_any_heap_ref_ptrs(Process *rp, char* mod_start, Uint mod_size)
     sdesc = nstack_walk_init_sdesc_ignore_trap(rp, &walk_state);
 
     while (!nstack_walk_nsp_reached_end(nsp, nsp_end)) {
-	unsigned long ra;
+	UWord ra;
 	unsigned sdesc_size = nstack_walk_frame_size(sdesc);
 	unsigned i = 0;
 	unsigned mask = sdesc->livebits[0];
@@ -349,8 +349,8 @@ nstack_any_heap_ref_ptrs(Process *rp, char* mod_start, Uint mod_size)
 		mask = sdesc->livebits[i >> 5];
 	}
 	ra = nstack_walk_frame_ra(nsp, sdesc);
-	if (ra == (unsigned long)nbif_stack_trap_ra)
-	    ra = (unsigned long)rp->hipe.ngra;
+	if (ra == (UWord)nbif_stack_trap_ra)
+	    ra = (UWord)rp->hipe.ngra;
 	sdesc = hipe_find_sdesc(ra);
 	nsp = nstack_walk_next_frame(nsp, sdesc_size);
     }
@@ -379,9 +379,9 @@ nstack_any_cps_in_segment(Process *p, char* seg_start, Uint seg_size)
 
     while (!nstack_walk_nsp_reached_end(nsp, nsp_end)) {
 	unsigned sdesc_size = nstack_walk_frame_size(sdesc);
-	unsigned long ra = nstack_walk_frame_ra(nsp, sdesc);
-	if (ra == (unsigned long)nbif_stack_trap_ra)
-	    ra = (unsigned long)p->hipe.ngra;
+	UWord ra = nstack_walk_frame_ra(nsp, sdesc);
+	if (ra == (UWord)nbif_stack_trap_ra)
+	    ra = (UWord)p->hipe.ngra;
 	if (ErtsInArea(ra, seg_start, seg_size))
             return 1;
         sdesc = hipe_find_sdesc(ra);

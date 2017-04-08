@@ -85,10 +85,10 @@ nstack_walk_init_sdesc_ignore_trap(const Process *p,
 				   struct nstack_walk_state *state)
 {
 #ifdef SKIP_YOUNGEST_FRAME
-    unsigned long ra = p->hipe.nsp[0];
+    UWord ra = p->hipe.nsp[0];
     const struct hipe_sdesc *sdesc;
-    if (ra == (unsigned long)nbif_stack_trap_ra)
-	ra = (unsigned long)p->hipe.ngra;
+    if (ra == (UWord)nbif_stack_trap_ra)
+	ra = (UWord)p->hipe.ngra;
     sdesc = hipe_find_sdesc(ra);
     state->sdesc0 = sdesc;
     return sdesc;
@@ -119,8 +119,8 @@ static inline void nstack_walk_kill_trap(Process *p, Eterm *nsp_end)
     /* remove gray/white boundary trap */
     for (;;) {
 	--nsp_end;
-	if (nsp_end[0] == (unsigned long)nbif_stack_trap_ra) {
-	    nsp_end[0] = (unsigned long)p->hipe.ngra;
+	if (nsp_end[0] == (UWord)nbif_stack_trap_ra) {
+	    nsp_end[0] = (UWord)p->hipe.ngra;
 	    break;
 	}
     }
@@ -146,7 +146,7 @@ static inline Eterm *nstack_walk_frame_index(Eterm *nsp, unsigned int i)
     return &nsp[i];
 }
 
-static inline unsigned long
+static inline UWord
 nstack_walk_frame_ra(const Eterm *nsp, const struct hipe_sdesc *sdesc)
 {
     return nsp[sdesc_fsize(sdesc)];

@@ -45,7 +45,7 @@ struct hipe_sdesc_table hipe_sdesc_table;
 
 static struct hipe_sdesc **alloc_bucket(unsigned int size)
 {
-    unsigned long nbytes = size * sizeof(struct hipe_sdesc*);
+    Uint nbytes = size * sizeof(struct hipe_sdesc*);
     struct hipe_sdesc **bucket = erts_alloc(ERTS_ALC_T_HIPE_LL, nbytes);
     sys_memzero(bucket, nbytes);
     return bucket;
@@ -80,7 +80,7 @@ static void hipe_grow_sdesc_table(void)
 
 struct hipe_sdesc *hipe_put_sdesc(struct hipe_sdesc *sdesc)
 {
-    unsigned long ra;
+    UWord ra;
     unsigned int i;
     struct hipe_sdesc *chain;
     unsigned int size;

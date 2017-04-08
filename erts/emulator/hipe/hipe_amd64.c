@@ -154,10 +154,10 @@ void *hipe_make_native_stub(void *callee_exp, unsigned int beamArity)
     codep[2] = P_CALLEE_EXP;
     codep += 3;
 #endif
-    codep[0] = ((unsigned long)callee_exp      ) & 0xFF;
-    codep[1] = ((unsigned long)callee_exp >>  8) & 0xFF;
-    codep[2] = ((unsigned long)callee_exp >> 16) & 0xFF;
-    codep[3] = ((unsigned long)callee_exp >> 24) & 0xFF;
+    codep[0] = ((UWord)callee_exp      ) & 0xFF;
+    codep[1] = ((UWord)callee_exp >>  8) & 0xFF;
+    codep[2] = ((UWord)callee_exp >> 16) & 0xFF;
+    codep[3] = ((UWord)callee_exp >> 24) & 0xFF;
     codep += 4;
 
     /* movl (shl 32 $callee_exp), P_CALLEE_EXP+4(%ebp); 3 or 6 bytes, plus 4 */
@@ -174,10 +174,10 @@ void *hipe_make_native_stub(void *callee_exp, unsigned int beamArity)
     codep[2] =  (P_CALLEE_EXP+4);
     codep += 3;
 #endif
-    codep[0] = ((unsigned long)callee_exp >> 32) & 0xFF;
-    codep[1] = ((unsigned long)callee_exp >> 40) & 0xFF;
-    codep[2] = ((unsigned long)callee_exp >> 48) & 0xFF;
-    codep[3] = ((unsigned long)callee_exp >> 56) & 0xFF;
+    codep[0] = ((UWord)callee_exp >> 32) & 0xFF;
+    codep[1] = ((UWord)callee_exp >> 40) & 0xFF;
+    codep[2] = ((UWord)callee_exp >> 48) & 0xFF;
+    codep[3] = ((UWord)callee_exp >> 56) & 0xFF;
     codep += 4;
 
     /* movb $beamArity, P_ARITY(%ebp); 3 or 6 bytes */
@@ -221,7 +221,10 @@ void hipe_free_native_stub(void* stub)
 void hipe_arch_print_pcb(struct hipe_process_state *p)
 {
 #define U(n,x) \
-    printf(" % 4d | %s | 0x%0*lx | %*s |\r\n", (int)offsetof(struct hipe_process_state,x), n, 2*(int)sizeof(long), (unsigned long)p->x, 2+2*(int)sizeof(long), "")
+    erts_printf(" % 4d | %s | 0x%0*bpx | %*s |\r\n",           \
+                (int)offsetof(struct hipe_process_state,x), n, \
+                2*(int)sizeof(UWord), (UWord)p->x,             \
+                2+2*(int)sizeof(UWord), "")
     U("ncsp       ", ncsp);
     U("narity     ", narity);
 #undef U

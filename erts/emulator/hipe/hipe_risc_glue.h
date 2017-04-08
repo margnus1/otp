@@ -68,8 +68,8 @@ static ERTS_INLINE void hipe_arch_glue_init(void)
 {
     static struct hipe_sdesc_with_exnra nbif_return_sdesc;
 
-    nbif_return_sdesc.exnra = (unsigned long)nbif_fail;
-    nbif_return_sdesc.sdesc.bucket.hvalue = (unsigned long)nbif_return;
+    nbif_return_sdesc.exnra = (UWord)nbif_fail;
+    nbif_return_sdesc.sdesc.bucket.hvalue = (UWord)nbif_return;
     nbif_return_sdesc.sdesc.fsize = 0;
     nbif_return_sdesc.sdesc.has_exnra = 1;
     nbif_return_sdesc.sdesc.stk_nargs = 0;

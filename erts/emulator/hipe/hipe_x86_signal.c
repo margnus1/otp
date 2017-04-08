@@ -278,7 +278,7 @@ void hipe_thread_signal_init(void)
 static void hipe_sigaltstack_init(void)
 {
 #if !defined(ERTS_SMP)
-    static unsigned long my_sigstack[SIGSTKSZ/sizeof(long)];
+    static UWord my_sigstack[SIGSTKSZ/sizeof(UWord)];
     hipe_sigaltstack(my_sigstack);
 #endif
 }

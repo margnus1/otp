@@ -424,8 +424,8 @@ BIF_RETTYPE hipe_bifs_enter_code_3(BIF_ALIST_3)
 	    nrcallees = 0;
 	// XXX: Is there any reason to not just BIF_ERROR, so that the runtime
 	// survives?
-	erts_exit(ERTS_ERROR_EXIT, "%s: failed to allocate %lu bytes and %lu trampolines\r\n",
-		 __func__, (unsigned long)nrbytes, (unsigned long)nrcallees);
+	erts_exit(ERTS_ERROR_EXIT, "%s: failed to allocate %llu bytes and %llu trampolines\r\n",
+		 __func__, (unsigned long long)nrbytes, (unsigned long long)nrcallees);
     }
     memcpy(address, bytes, nrbytes);
     hipe_flush_icache_range(address, nrbytes);
@@ -980,7 +980,7 @@ BIF_RETTYPE hipe_bifs_get_fe_2(BIF_ALIST_2)
 
 	atom_buf[0] = '\0';
 	strncat(atom_buf, (char*)atom_tab(i)->name, atom_tab(i)->len);
-	printf("no fun entry for %s %ld:%ld\n", atom_buf, (unsigned long)uniq, (unsigned long)index);
+	erts_printf("no fun entry for %s %bed:%bed\n", atom_buf, uniq, index);
 	BIF_ERROR(BIF_P, BADARG);
     }
     BIF_RET(address_to_term((void *)fe, BIF_P));
@@ -1021,7 +1021,7 @@ struct hipe_ref_head {
 struct hipe_mfa_info {
     HashBucket mod2mfa;
     struct {
-	unsigned long hvalue;
+	UWord hvalue;
 	struct hipe_mfa_info *next;
     } bucket;
     Eterm m;	/* atom */
@@ -1168,7 +1168,7 @@ struct hipe_mfa_info* mod2mfa_get_safe(Module* modp)
 
 static struct hipe_mfa_info **hipe_mfa_info_table_alloc_bucket(unsigned int size)
 {
-    unsigned long nbytes = size * sizeof(struct hipe_mfa_info*);
+    Uint nbytes = size * sizeof(struct hipe_mfa_info*);
     struct hipe_mfa_info **bucket = erts_alloc(ERTS_ALC_T_HIPE_LL, nbytes);
     sys_memzero(bucket, nbytes);
     return bucket;
@@ -1240,7 +1240,7 @@ void hipe_mfa_info_table_init(void)
 
 static inline struct hipe_mfa_info *hipe_mfa_info_table_get_locked(Eterm m, Eterm f, unsigned int arity)
 {
-    unsigned long h;
+    UWord h;
     unsigned int i;
     struct hipe_mfa_info *p;
 
@@ -1259,7 +1259,7 @@ static inline struct hipe_mfa_info *hipe_mfa_info_table_get_locked(Eterm m, Eter
 
 static struct hipe_mfa_info *hipe_mfa_info_table_put_rwlocked(Eterm m, Eterm f, unsigned int arity)
 {
-    unsigned long h;
+    UWord h;
     unsigned int i;
     struct hipe_mfa_info *p;
     struct hipe_mfa_info *first_in_mod;
@@ -1482,7 +1482,7 @@ BIF_RETTYPE nbif_impl_hipe_nonclosure_address(NBIF_ALIST_2)
 
 int hipe_find_mfa_from_ra(const void *ra, Eterm *m, Eterm *f, unsigned int *a)
 {
-    const struct hipe_sdesc* sdesc = hipe_find_sdesc((unsigned long)ra);
+    const struct hipe_sdesc* sdesc = hipe_find_sdesc((UWord)ra);
 
     if (!sdesc || sdesc->m_aix == atom_val(am_Empty))
         return 0;
@@ -1897,7 +1897,7 @@ BIF_RETTYPE hipe_bifs_system_crc_0(BIF_ALIST_0)
 BIF_RETTYPE hipe_bifs_get_rts_param_1(BIF_ALIST_1)
 {
     unsigned int is_defined;
-    unsigned long value;
+    UWord value;
 
     if (is_not_small(BIF_ARG_1))
 	BIF_ERROR(BIF_P, BADARG);

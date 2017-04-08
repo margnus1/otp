@@ -42,14 +42,14 @@ extern void hipe_flush_icache_range(void *address, unsigned int nbytes);
 /* for hipe_bifs_{read,write}_{s,u}32 */
 static ERTS_INLINE int hipe_word32_address_ok(void *address)
 {
-    return ((unsigned long)address & 0x3) == 0;
+    return ((UWord)address & 0x3) == 0;
 }
 
 #if defined(__powerpc64__)
 /* for hipe_bifs_{read,write}_{s,u}64 */
 static ERTS_INLINE int hipe_word64_address_ok(void *address)
 {
-    return ((unsigned long)address & 0x7) == 0;
+    return ((UWord)address & 0x7) == 0;
 }
 #endif
 

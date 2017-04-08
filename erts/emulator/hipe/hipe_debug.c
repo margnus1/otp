@@ -39,16 +39,16 @@
 #include "hipe_debug.h"
 #include "erl_map.h"
 
-static const char dashes[2*sizeof(long)+5] = {
-    [0 ... 2*sizeof(long)+3] = '-'
+static const char dashes[2*sizeof(UWord)+5] = {
+    [0 ... 2*sizeof(UWord)+3] = '-'
 };
 
-static const char dots[2*sizeof(long)+5] = {
-    [0 ... 2*sizeof(long)+3] = '.'
+static const char dots[2*sizeof(UWord)+5] = {
+    [0 ... 2*sizeof(UWord)+3] = '.'
 };
 
-static const char stars[2*sizeof(long)+5] = {
-    [0 ... 2*sizeof(long)+3] = '*'
+static const char stars[2*sizeof(UWord)+5] = {
+    [0 ... 2*sizeof(UWord)+3] = '*'
 };
 
 extern Uint beam_apply[];
@@ -76,20 +76,20 @@ static void print_beam_pc(BeamInstr *pc)
 static void catch_slot(Eterm *pos, Eterm val)
 {
     BeamInstr *pc = catch_pc(val);
-    printf(" | 0x%0*lx | 0x%0*lx | CATCH 0x%0*lx (BEAM ",
-	   2*(int)sizeof(long), (unsigned long)pos,
-	   2*(int)sizeof(long), (unsigned long)val,
-	   2*(int)sizeof(long), (unsigned long)pc);
+    erts_printf(" | 0x%0*bpx | 0x%0*bpx | CATCH 0x%0*bpx (BEAM ",
+                2*(int)sizeof(UWord), (UWord)pos,
+                2*(int)sizeof(UWord), (UWord)val,
+                2*(int)sizeof(UWord), (UWord)pc);
     print_beam_pc(pc);
     printf(")\r\n");
 }
 
 static void print_beam_cp(Eterm *pos, Eterm val)
 {
-    printf(" |%s|%s| BEAM ACTIVATION RECORD\r\n", dashes, dashes);
-    printf(" | 0x%0*lx | 0x%0*lx | BEAM PC ",
-	   2*(int)sizeof(long), (unsigned long)pos,
-	   2*(int)sizeof(long), (unsigned long)val);
+    erts_printf(" |%s|%s| BEAM ACTIVATION RECORD\r\n", dashes, dashes);
+    erts_printf(" | 0x%0*bpx | 0x%0*bpx | BEAM PC ",
+                2*(int)sizeof(UWord), (UWord)pos,
+                2*(int)sizeof(UWord), (UWord)val);
     print_beam_pc(cp_val(val));
     printf("\r\n");
 }
@@ -104,8 +104,8 @@ static void print_catch(Eterm *pos, Eterm val)
 static void print_stack(Eterm *sp, Eterm *end)
 {
     printf(" | %*s | %*s |\r\n",
-	   2+2*(int)sizeof(long), "Address",
-	   2+2*(int)sizeof(long), "Contents");
+	   2+2*(int)sizeof(UWord), "Address",
+	   2+2*(int)sizeof(UWord), "Contents");
     while (sp < end) {
 	Eterm val = sp[0];
 	if (is_CP(val))
@@ -113,9 +113,9 @@ static void print_stack(Eterm *sp, Eterm *end)
 	else if (is_catch(val))
 	    print_catch(sp, val);
 	else {
-	    printf(" | 0x%0*lx | 0x%0*lx | ",
-		   2*(int)sizeof(long), (unsigned long)sp,
-		   2*(int)sizeof(long), (unsigned long)val);
+	    erts_printf(" | 0x%0*bpx | 0x%0*bpx | ",
+		   2*(int)sizeof(UWord), (UWord)sp,
+		   2*(int)sizeof(UWord), (UWord)val);
 	    erts_printf("%.30T", val);
 	    printf("\r\n");
 	}
@@ -132,19 +132,19 @@ void hipe_print_estack(Process *p)
 
 static void print_heap(Eterm *pos, Eterm *end)
 {
-    printf("From: 0x%0*lx to 0x%0*lx\n\r",
-	   2*(int)sizeof(long), (unsigned long)pos,
-	   2*(int)sizeof(long), (unsigned long)end);
+    erts_printf("From: 0x%0*bpx to 0x%0*bpx\n\r",
+                2*(int)sizeof(UWord), (UWord)pos,
+                2*(int)sizeof(UWord), (UWord)end);
     printf(" |         H E A P         |\r\n");
     printf(" | %*s | %*s |\r\n",
-	   2+2*(int)sizeof(long), "Address",
-	   2+2*(int)sizeof(long), "Contents");
+	   2+2*(int)sizeof(UWord), "Address",
+	   2+2*(int)sizeof(UWord), "Contents");
     printf(" |%s|%s|\r\n", dashes, dashes);
     while (pos < end) {
 	Eterm val = pos[0];
-	printf(" | 0x%0*lx | 0x%0*lx | ",
-	       2*(int)sizeof(long), (unsigned long)pos,
-	       2*(int)sizeof(long), (unsigned long)val);
+        erts_printf(" | 0x%0*bpx | 0x%0*bpx | ",
+                    2*(int)sizeof(UWord), (UWord)pos,
+                    2*(int)sizeof(UWord), (UWord)val);
 	++pos;
 	if (is_arity_value(val))
 	    printf("Arity(%lu)", arityval(val));
@@ -152,9 +152,9 @@ static void print_heap(Eterm *pos, Eterm *end)
 	    unsigned int ari = thing_arityval(val);
 	    printf("Thing Arity(%u) Tag(%lu)", ari, thing_subtag(val));
 	    while (ari) {
-		printf("\r\n | 0x%0*lx | 0x%0*lx | THING",
-		       2*(int)sizeof(long), (unsigned long)pos,
-		       2*(int)sizeof(long), (unsigned long)*pos);
+                erts_printf("\r\n | 0x%0*bpx | 0x%0*bpx | THING",
+                            2*(int)sizeof(UWord), (UWord)pos,
+                            2*(int)sizeof(UWord), (UWord)*pos);
 		++pos;
 		--ari;
 	    }
@@ -172,15 +172,19 @@ void hipe_print_heap(Process *p)
 
 void hipe_print_pcb(Process *p)
 {
-    printf("P: 0x%0*lx\r\n", 2*(int)sizeof(long), (unsigned long)p);
+    erts_printf("P: 0x%0*bpx\r\n", 2*(int)sizeof(UWord), (UWord)p);
     printf("-----------------------------------------------\r\n");
     printf("Offset| Name        | Value      | *Value     |\r\n");
 #undef U
-#define U(n,x) \
-    printf(" % 4d | %s | 0x%0*lx |            |\r\n", (int)offsetof(Process,x), n, 2*(int)sizeof(long), (unsigned long)p->x)
+#define U(n,x)                                                \
+    erts_printf(" % 4d | %s | 0x%0*bpx |            |\r\n",   \
+                (int)offsetof(Process,x), n,                  \
+                2*(int)sizeof(UWord), (UWord)p->x)
 #undef P
 #define P(n,x) \
-    printf(" % 4d | %s | 0x%0*lx | 0x%0*lx |\r\n", (int)offsetof(Process,x), n, 2*(int)sizeof(long), (unsigned long)p->x, 2*(int)sizeof(long), p->x ? (unsigned long)*(p->x) : -1UL)
+    printf(" % 4d | %s | 0x%0*bpx | 0x%0*bpx |\r\n", \
+           (int)offsetof(Process,x), n, 2*(int)sizeof(UWord), (UWord)p->x, \
+           2*(int)sizeof(UWord), p->x ? (UWord)*(p->x) : -1UL)
 
     U("htop       ", htop);
     U("hend       ", hend);

@@ -32,7 +32,7 @@
 
 struct hipe_sdesc {
     struct {
-	unsigned long hvalue;	/* return address */
+	UWord hvalue;			/* return address */
 	struct hipe_sdesc *next;	/* hash collision chain */
     } bucket;
     unsigned int fsize : 23;    /* frame size */
@@ -46,7 +46,7 @@ struct hipe_sdesc {
 };
 
 struct hipe_sdesc_with_exnra {
-    unsigned long exnra;
+    UWord exnra;
     struct hipe_sdesc sdesc;
 };
 
@@ -61,7 +61,7 @@ static ERTS_INLINE unsigned int sdesc_arity(const struct hipe_sdesc *sdesc)
     return sdesc->stk_nargs;
 }
 
-static ERTS_INLINE unsigned long sdesc_exnra(const struct hipe_sdesc *sdesc)
+static ERTS_INLINE UWord sdesc_exnra(const struct hipe_sdesc *sdesc)
 {
     if (sdesc->has_exnra) {
 	const char *tmp;
@@ -90,7 +90,7 @@ extern struct hipe_sdesc *hipe_decode_sdesc(Eterm);
 #define likely(x)	__builtin_expect((x),1)
 #define unlikely(x)	__builtin_expect((x),0)
 
-static ERTS_INLINE const struct hipe_sdesc *hipe_find_sdesc(unsigned long ra)
+static ERTS_INLINE const struct hipe_sdesc *hipe_find_sdesc(UWord ra)
 {
     unsigned int i = (ra >> HIPE_RA_LSR_COUNT) & hipe_sdesc_table.mask;
     const struct hipe_sdesc *sdesc = hipe_sdesc_table.bucket[i];

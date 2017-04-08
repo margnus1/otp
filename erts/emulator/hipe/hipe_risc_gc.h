@@ -46,7 +46,7 @@ static inline Eterm *nstack_walk_nsp_begin(const Process *p)
 static inline const struct hipe_sdesc*
 nstack_walk_init_sdesc(const Process *p, struct nstack_walk_state *state)
 {
-    const struct hipe_sdesc *sdesc = hipe_find_sdesc((unsigned long)p->hipe.nra);
+    const struct hipe_sdesc *sdesc = hipe_find_sdesc((UWord)p->hipe.nra);
     state->sdesc0 = sdesc;
     return sdesc;
 }
@@ -55,10 +55,10 @@ static inline const struct hipe_sdesc*
 nstack_walk_init_sdesc_ignore_trap(const Process *p,
 				   struct nstack_walk_state *state)
 {
-    unsigned long ra = (unsigned long)p->hipe.nra;
+    UWord ra = (UWord)p->hipe.nra;
     const struct hipe_sdesc *sdesc;
-    if (ra == (unsigned long)&nbif_stack_trap_ra)
-	ra = (unsigned long)p->hipe.ngra;
+    if (ra == (UWord)&nbif_stack_trap_ra)
+	ra = (UWord)p->hipe.ngra;
     sdesc = hipe_find_sdesc(ra);
     state->sdesc0 = sdesc;
     return sdesc;
@@ -80,13 +80,13 @@ static inline Eterm *nstack_walk_nsp_end(const Process *p)
 static inline void nstack_walk_kill_trap(Process *p, Eterm *nsp_end)
 {
     /* remove gray/white boundary trap */
-    if ((unsigned long)p->hipe.nra == (unsigned long)&nbif_stack_trap_ra) {
+    if ((UWord)p->hipe.nra == (UWord)&nbif_stack_trap_ra) {
 	p->hipe.nra = p->hipe.ngra;
     } else {
 	for (;;) {
 	    --nsp_end;
-	    if (nsp_end[0] == (unsigned long)&nbif_stack_trap_ra) {
-		nsp_end[0] = (unsigned long)p->hipe.ngra;
+	    if (nsp_end[0] == (UWord)&nbif_stack_trap_ra) {
+		nsp_end[0] = (UWord)p->hipe.ngra;
 		break;
 	    }
 	}
@@ -113,7 +113,7 @@ static inline Eterm *nstack_walk_frame_index(Eterm *nsp, unsigned int i)
     return &nsp[i];
 }
 
-static inline unsigned long
+static inline UWord
 nstack_walk_frame_ra(const Eterm *nsp, const struct hipe_sdesc *sdesc)
 {
     return nsp[sdesc_fsize(sdesc)];

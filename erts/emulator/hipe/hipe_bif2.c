@@ -102,7 +102,7 @@ BIF_RETTYPE hipe_bifs_show_term_1(BIF_ALIST_1)
 {
     Eterm obj = BIF_ARG_1;
 
-    printf("0x%0*lx\r\n", 2*(int)sizeof(long), obj);
+    erts_printf("0x%0*bex\r\n", 2*(int)sizeof(Eterm), obj);
     do {
 	Eterm *objp;
 	int i, ary;
@@ -120,16 +120,16 @@ BIF_RETTYPE hipe_bifs_show_term_1(BIF_ALIST_1)
 	    else if (is_arity_value(header))
 		ary = arityval(header);
 	    else {
-		printf("bad header %#lx\r\n", header);
+		erts_printf("bad header %#bex\r\n", header);
 		break;
 	    }
 	    ary += 1;
 	} else
 	    break;
 	for (i = 0; i < ary; ++i)
-	    printf("0x%0*lx: 0x%0*lx\r\n",
-		   2*(int)sizeof(long), (unsigned long)&objp[i],
-		   2*(int)sizeof(long), objp[i]);
+	    erts_printf("0x%0*bpx: 0x%0*bex\r\n",
+                        2*(int)sizeof(UWord), (UWord)&objp[i],
+                        2*(int)sizeof(Eterm), objp[i]);
     } while (0);
     erts_printf("%T", obj);
     printf("\r\n");

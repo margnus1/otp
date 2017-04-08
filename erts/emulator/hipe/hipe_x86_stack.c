@@ -41,9 +41,9 @@ extern void nbif_stack_trap_ra(void);
 static void print_slot(Eterm *sp, unsigned int live)
 {
     Eterm val = *sp;
-    printf(" | 0x%0*lx | 0x%0*lx | ",
-	   2*(int)sizeof(long), (unsigned long)sp,
-	   2*(int)sizeof(long), val);
+    erts_printf(" | 0x%0*bpx | 0x%0*bpx | ",
+                2*(int)sizeof(UWord), (UWord)sp,
+                2*(int)sizeof(UWord), val);
     if (live)
 	erts_printf("%.30T", val);
     printf("\r\n");
@@ -56,13 +56,13 @@ void hipe_print_nstack(Process *p)
     struct hipe_sdesc sdesc0;
     const struct hipe_sdesc *sdesc1;
     const struct hipe_sdesc *sdesc;
-    unsigned long ra;
-    unsigned long exnra;
+    UWord ra;
+    UWord exnra;
     unsigned int mask;
     unsigned int sdesc_size;
     unsigned int i;
-    static const char dashes[2*sizeof(long)+5] = {
-	[0 ... 2*sizeof(long)+3] = '-'
+    static const char dashes[2*sizeof(UWord)+5] = {
+	[0 ... 2*sizeof(UWord)+3] = '-'
     };
 
     nsp = p->hipe.nsp;
@@ -75,45 +75,45 @@ void hipe_print_nstack(Process *p)
     sdesc0.livebits[0] = ~1;
     sdesc = &sdesc0;
 
-    printf(" |      NATIVE  STACK      |\r\n");
-    printf(" |%s|%s|\r\n", dashes, dashes);
-    printf(" | %*s | 0x%0*lx |\r\n",
-	   2+2*(int)sizeof(long), "heap",
-	   2*(int)sizeof(long), (unsigned long)p->heap);
-    printf(" | %*s | 0x%0*lx |\r\n",
-	   2+2*(int)sizeof(long), "high_water",
-	   2*(int)sizeof(long), (unsigned long)p->high_water);
-    printf(" | %*s | 0x%0*lx |\r\n",
-	   2+2*(int)sizeof(long), "hend",
-	   2*(int)sizeof(long), (unsigned long)p->htop);
-    printf(" | %*s | 0x%0*lx |\r\n",
-	   2+2*(int)sizeof(long), "old_heap",
-	   2*(int)sizeof(long), (unsigned long)p->old_heap);
-    printf(" | %*s | 0x%0*lx |\r\n",
-	   2+2*(int)sizeof(long), "old_hend",
-	   2*(int)sizeof(long), (unsigned long)p->old_hend);
-    printf(" | %*s | 0x%0*lx |\r\n",
-	   2+2*(int)sizeof(long), "nsp",
-	   2*(int)sizeof(long), (unsigned long)p->hipe.nsp);
-    printf(" | %*s | 0x%0*lx |\r\n",
-	   2+2*(int)sizeof(long), "nstend",
-	   2*(int)sizeof(long), (unsigned long)p->hipe.nstend);
-    printf(" | %*s| 0x%0*lx |\r\n",
-	   2+2*(int)sizeof(long)+1, "nstblacklim",
-	   2*(int)sizeof(long), (unsigned long)p->hipe.nstblacklim);
-    printf(" | %*s | 0x%0*lx |\r\n",
-	   2+2*(int)sizeof(long), "nstgraylim",
-	   2*(int)sizeof(long), (unsigned long)p->hipe.nstgraylim);
-    printf(" | %*s | 0x%0*x |\r\n",
-	   2+2*(int)sizeof(long), "narity",
-	   2*(int)sizeof(long), p->hipe.narity);
-    printf(" |%s|%s|\r\n", dashes, dashes);
-    printf(" | %*s | %*s |\r\n",
-	   2+2*(int)sizeof(long), "Address",
-	   2+2*(int)sizeof(long), "Contents");
+    erts_printf(" |      NATIVE  STACK      |\r\n");
+    erts_printf(" |%s|%s|\r\n", dashes, dashes);
+    erts_printf(" | %*s | 0x%0*bpx |\r\n",
+                2+2*(int)sizeof(UWord), "heap",
+                2*(int)sizeof(UWord), (UWord)p->heap);
+    erts_printf(" | %*s | 0x%0*bpx |\r\n",
+                2+2*(int)sizeof(UWord), "high_water",
+                2*(int)sizeof(UWord), (UWord)p->high_water);
+    erts_printf(" | %*s | 0x%0*bpx |\r\n",
+                2+2*(int)sizeof(UWord), "hend",
+                2*(int)sizeof(UWord), (UWord)p->htop);
+    erts_printf(" | %*s | 0x%0*bpx |\r\n",
+                2+2*(int)sizeof(UWord), "old_heap",
+                2*(int)sizeof(UWord), (UWord)p->old_heap);
+    erts_printf(" | %*s | 0x%0*bpx |\r\n",
+                2+2*(int)sizeof(UWord), "old_hend",
+                2*(int)sizeof(UWord), (UWord)p->old_hend);
+    erts_printf(" | %*s | 0x%0*bpx |\r\n",
+                2+2*(int)sizeof(UWord), "nsp",
+                2*(int)sizeof(UWord), (UWord)p->hipe.nsp);
+    erts_printf(" | %*s | 0x%0*bpx |\r\n",
+                2+2*(int)sizeof(UWord), "nstend",
+                2*(int)sizeof(UWord), (UWord)p->hipe.nstend);
+    erts_printf(" | %*s| 0x%0*bpx |\r\n",
+                2+2*(int)sizeof(UWord)+1, "nstblacklim",
+                2*(int)sizeof(UWord), (UWord)p->hipe.nstblacklim);
+    erts_printf(" | %*s | 0x%0*bpx |\r\n",
+                2+2*(int)sizeof(UWord), "nstgraylim",
+                2*(int)sizeof(UWord), (UWord)p->hipe.nstgraylim);
+    erts_printf(" | %*s | 0x%0*x |\r\n",
+                2+2*(int)sizeof(UWord), "narity",
+                2*(int)sizeof(UWord), (UWord)p->hipe.narity);
+    erts_printf(" |%s|%s|\r\n", dashes, dashes);
+    erts_printf(" | %*s | %*s |\r\n",
+                2+2*(int)sizeof(UWord), "Address",
+                2+2*(int)sizeof(UWord), "Contents");
 
     for (;;) {
-	printf(" |%s|%s|\r\n", dashes, dashes);
+	erts_printf(" |%s|%s|\r\n", dashes, dashes);
 	if (nsp >= nsp_end) {
 	    if (nsp == nsp_end)
 		return;
@@ -121,8 +121,8 @@ void hipe_print_nstack(Process *p)
 	    break;
 	}
 	ra = nsp[sdesc_fsize(sdesc)];
-	if (ra == (unsigned long)nbif_stack_trap_ra)
-	    sdesc1 = hipe_find_sdesc((unsigned long)p->hipe.ngra);
+	if (ra == (UWord)nbif_stack_trap_ra)
+	    sdesc1 = hipe_find_sdesc((UWord)p->hipe.ngra);
 	else
 	    sdesc1 = hipe_find_sdesc(ra);
 	sdesc_size = sdesc_fsize(sdesc) + 1 + sdesc_arity(sdesc);
@@ -130,15 +130,15 @@ void hipe_print_nstack(Process *p)
 	mask = sdesc->livebits[0];
 	for (;;) {
 	    if (i == sdesc_fsize(sdesc)) {
-		printf(" | 0x%0*lx | 0x%0*lx | ",
-		       2*(int)sizeof(long), (unsigned long)&nsp[i],
-		       2*(int)sizeof(long), ra);
-		if (ra == (unsigned long)nbif_stack_trap_ra)
-		    printf("STACK TRAP, ORIG RA 0x%lx", (unsigned long)p->hipe.ngra);
+		erts_printf(" | 0x%0*bpx | 0x%0*bpx | ",
+		       2*(int)sizeof(UWord), (UWord)&nsp[i],
+		       2*(int)sizeof(UWord), ra);
+		if (ra == (UWord)nbif_stack_trap_ra)
+		    erts_printf("STACK TRAP, ORIG RA 0x%bpx", (UWord)p->hipe.ngra);
 		else
 		    printf("NATIVE RA");
 		if ((exnra = sdesc_exnra(sdesc1)) != 0)
-		    printf(", EXNRA 0x%lx", exnra);
+		    erts_printf(", EXNRA 0x%bpx", exnra);
 		printf("\r\n");
 	    } else
 		print_slot(&nsp[i], (mask & 1));
@@ -162,12 +162,12 @@ void hipe_update_stack_trap(Process *p, const struct hipe_sdesc *sdesc)
 {
     Eterm *nsp;
     Eterm *nsp_end;
-    unsigned long ra;
+    UWord ra;
     int n;
 
     nsp = p->hipe.nsp;
     nsp_end = p->hipe.nstend;
-    if ((unsigned long)((char*)nsp_end - (char*)nsp) < MINSTACK*sizeof(Eterm*)) {
+    if ((UWord)((char*)nsp_end - (char*)nsp) < MINSTACK*sizeof(Eterm*)) {
 	p->hipe.nstgraylim = NULL;
 	return;
     }
@@ -186,7 +186,7 @@ void hipe_update_stack_trap(Process *p, const struct hipe_sdesc *sdesc)
     }
     p->hipe.nstgraylim = nsp + 1 + sdesc_arity(sdesc);
     p->hipe.ngra = (void(*)(void))ra;
-    nsp[0] = (unsigned long)nbif_stack_trap_ra;
+    nsp[0] = (UWord)nbif_stack_trap_ra;
 }
 
 /*
@@ -199,7 +199,7 @@ void hipe_update_stack_trap(Process *p, const struct hipe_sdesc *sdesc)
 void (*hipe_handle_stack_trap(Process *p))(void)
 {
     void (*ngra)(void) = p->hipe.ngra;
-    const struct hipe_sdesc *sdesc = hipe_find_sdesc((unsigned long)ngra);
+    const struct hipe_sdesc *sdesc = hipe_find_sdesc((UWord)ngra);
     hipe_update_stack_trap(p, sdesc);
     return ngra;
 }
@@ -217,8 +217,8 @@ void hipe_find_handler(Process *p)
 {
     Eterm *nsp;
     Eterm *nsp_end;
-    unsigned long ra;
-    unsigned long exnra;
+    UWord ra;
+    UWord exnra;
     unsigned int arity;
     const struct hipe_sdesc *sdesc;
     unsigned int nstkarity;
@@ -232,15 +232,15 @@ void hipe_find_handler(Process *p)
 
     while (nsp < nsp_end) {
 	ra = nsp[0];
-	if (ra == (unsigned long)nbif_stack_trap_ra)
-	    ra = (unsigned long)p->hipe.ngra;
+	if (ra == (UWord)nbif_stack_trap_ra)
+	    ra = (UWord)p->hipe.ngra;
 	sdesc = hipe_find_sdesc(ra);
 	/* nsp = nsp + 1 + arity + sdesc_fsize(sdesc); */
 	nsp += 1;		/* skip ra */
 	nsp += arity;		/* skip actuals */
 	if ((exnra = sdesc_exnra(sdesc)) != 0 &&
 	    (p->catches >= 0 ||
-	     exnra == (unsigned long)nbif_fail)) {
+	     exnra == (UWord)nbif_fail)) {
 	    p->hipe.u.ncallee = (void(*)(void)) exnra;
 	    p->hipe.nsp = nsp;
 	    p->hipe.narity = 0;
@@ -260,7 +260,7 @@ int hipe_fill_stacktrace(Process *p, int depth, Eterm **trace)
 {
     Eterm *nsp;
     Eterm *nsp_end;
-    unsigned long ra, prev_ra;
+    UWord ra, prev_ra;
     unsigned int arity;
     const struct hipe_sdesc *sdesc;
     unsigned int nstkarity;
@@ -280,8 +280,8 @@ int hipe_fill_stacktrace(Process *p, int depth, Eterm **trace)
     i = 0;
     while (nsp < nsp_end) {	/* INV: i < depth */
 	ra = nsp[0];
-	if (ra == (unsigned long)nbif_stack_trap_ra)
-	    ra = (unsigned long)p->hipe.ngra;
+	if (ra == (UWord)nbif_stack_trap_ra)
+	    ra = (UWord)p->hipe.ngra;
 	if (ra != prev_ra) {
 	    trace[i] = (Eterm*)ra;
 	    ++i;

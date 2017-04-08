@@ -34,17 +34,17 @@
 void hipe_flush_icache_range(void *address, unsigned int nbytes)
 {
 #if defined(__ARM_EABI__)
-    register unsigned long beg __asm__("r0") = (unsigned long)address;
-    register unsigned long end __asm__("r1") = (unsigned long)address + nbytes;
-    register unsigned long flg __asm__("r2") = 0;
-    register unsigned long scno __asm__("r7") = 0xf0002;
+    register UWord beg __asm__("r0") = (UWord)address;
+    register UWord end __asm__("r1") = (UWord)address + nbytes;
+    register UWord flg __asm__("r2") = 0;
+    register UWord scno __asm__("r7") = 0xf0002;
     __asm__ __volatile__("swi 0"	/* sys_cacheflush() */
 			 : "=r"(beg)
 			 : "0"(beg), "r"(end), "r"(flg), "r"(scno));
 #else
-    register unsigned long beg __asm__("r0") = (unsigned long)address;
-    register unsigned long end __asm__("r1") = (unsigned long)address + nbytes;
-    register unsigned long flg __asm__("r2") = 0;
+    register UWord beg __asm__("r0") = (UWord)address;
+    register UWord end __asm__("r1") = (UWord)address + nbytes;
+    register UWord flg __asm__("r2") = 0;
     __asm__ __volatile__("swi 0x9f0002"	/* sys_cacheflush() */
 			 : "=r"(beg)
 			 : "0"(beg), "r"(end), "r"(flg));
@@ -265,7 +265,10 @@ int hipe_patch_call(void *callAddress, void *destAddress, void *trampoline)
 void hipe_arch_print_pcb(struct hipe_process_state *p)
 {
 #define U(n,x) \
-    printf(" % 4d | %s | 0x%0*lx | %*s |\r\n", (int)offsetof(struct hipe_process_state,x), n, 2*(int)sizeof(long), (unsigned long)p->x, 2+2*(int)sizeof(long), "")
+    erts_printf(" % 4d | %s | 0x%0*bpx | %*s |\r\n",           \
+                (int)offsetof(struct hipe_process_state,x), n, \
+                2*(int)sizeof(UWord), (UWord)p->x,             \
+                2+2*(int)sizeof(UWord), "")
     U("nra        ", nra);
     U("narity     ", narity);
 #undef U

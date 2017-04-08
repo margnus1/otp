@@ -38,16 +38,16 @@ const unsigned int fconv_constant[2] = { 0x43300000, 0x80000000 };
 void hipe_flush_icache_range(void *address, unsigned int nbytes)
 {
     const unsigned int L1_CACHE_SHIFT = 5;
-    const unsigned long L1_CACHE_BYTES = 1 << L1_CACHE_SHIFT;
-    unsigned long start, p;
+    const UWord L1_CACHE_BYTES = 1 << L1_CACHE_SHIFT;
+    UWord start, p;
     unsigned int nlines, n;
 
     if (!nbytes)
 	return;
 
-    start = (unsigned long)address & ~(L1_CACHE_BYTES-1);
+    start = (UWord)address & ~(L1_CACHE_BYTES-1);
     nlines =
-	(((unsigned long)address & (L1_CACHE_BYTES-1))
+	(((UWord)address & (L1_CACHE_BYTES-1))
 	 + nbytes
 	 + (L1_CACHE_BYTES-1)) >> L1_CACHE_SHIFT;
 
@@ -206,7 +206,7 @@ void *hipe_make_native_stub(void *callee_exp, unsigned int beamArity)
 {
     Uint32 *code;
 
-    if ((unsigned long)&nbif_callemu & ~0x01FFFFFCUL)
+    if ((UWord)&nbif_callemu & ~0x01FFFFFCUL)
 	abort();
 
     code = erts_alloc(ERTS_ALC_T_HIPE_EXEC, 7*sizeof(Uint32));
@@ -214,19 +214,19 @@ void *hipe_make_native_stub(void *callee_exp, unsigned int beamArity)
 	return NULL;
 
     /* addis r12,0,callee_exp@highest */
-    code[0] = 0x3d800000 | (((unsigned long)callee_exp >> 48) & 0xffff);
+    code[0] = 0x3d800000 | (((UWord)callee_exp >> 48) & 0xffff);
     /* ori r12,r12,callee_exp@higher */
-    code[1] = 0x618c0000 | (((unsigned long)callee_exp >> 32) & 0xffff);
+    code[1] = 0x618c0000 | (((UWord)callee_exp >> 32) & 0xffff);
     /* sldi r12,r12,32 (rldicr r12,r12,32,31) */
     code[2] = 0x798c07c6;
     /* oris r12,r12,callee_exp@h */
-    code[3] = 0x658c0000 | (((unsigned long)callee_exp >> 16) & 0xffff);
+    code[3] = 0x658c0000 | (((UWord)callee_exp >> 16) & 0xffff);
     /* ori r12,r12,callee_exp@l */
-    code[4] = 0x618c0000 | ((unsigned long)callee_exp & 0xffff);
+    code[4] = 0x618c0000 | ((UWord)callee_exp & 0xffff);
     /* addi r0,0,beamArity */
     code[5] = 0x38000000 | (beamArity & 0x7FFF);
     /* ba nbif_callemu */
-    code[6] = 0x48000002 | (unsigned long)&nbif_callemu;
+    code[6] = 0x48000002 | (UWord)&nbif_callemu;
 
     hipe_flush_icache_range(code, 7*sizeof(Uint32));
 
@@ -296,7 +296,7 @@ void *hipe_make_native_stub(void *callee_exp, unsigned int beamArity)
      */
 
     /* verify that 'ba' can reach nbif_callemu */
-    if ((unsigned long)&nbif_callemu & ~0x01FFFFFCUL)
+    if ((UWord)&nbif_callemu & ~0x01FFFFFCUL)
 	abort();
 
     code = erts_alloc(ERTS_ALC_T_HIPE_EXEC, 4*sizeof(Uint32));
@@ -304,13 +304,13 @@ void *hipe_make_native_stub(void *callee_exp, unsigned int beamArity)
 	return NULL;
 
     /* addi r12,0,callee_exp@l */
-    code[0] = 0x39800000 | ((unsigned long)callee_exp & 0xFFFF);
+    code[0] = 0x39800000 | ((UWord)callee_exp & 0xFFFF);
     /* addi r0,0,beamArity */
     code[1] = 0x38000000 | (beamArity & 0x7FFF);
     /* addis r12,r12,callee_exp@ha */
-    code[2] = 0x3D8C0000 | at_ha((unsigned long)callee_exp);
+    code[2] = 0x3D8C0000 | at_ha((UWord)callee_exp);
     /* ba nbif_callemu */
-    code[3] = 0x48000002 | (unsigned long)&nbif_callemu;
+    code[3] = 0x48000002 | (UWord)&nbif_callemu;
 
     hipe_flush_icache_range(code, 4*sizeof(Uint32));
 
@@ -364,8 +364,11 @@ int hipe_patch_call(void *callAddress, void *destAddress, void *trampoline)
 
 void hipe_arch_print_pcb(struct hipe_process_state *p)
 {
-#define U(n,x) \
-    printf(" % 4d | %s | 0x%0*lx | %*s |\r\n", (int)offsetof(struct hipe_process_state,x), n, 2*(int)sizeof(long), (unsigned long)p->x, 2+2*(int)sizeof(long), "")
+#define U(n,x)                                                 \
+    erts_printf(" % 4d | %s | 0x%0*bpx | %*s |\r\n",           \
+                (int)offsetof(struct hipe_process_state,x), n, \
+                2*(int)sizeof(UWord), (UWord)p->x,             \
+                2+2*(int)sizeof(UWord), "")
     U("nra        ", nra);
     U("narity     ", narity);
 #undef U

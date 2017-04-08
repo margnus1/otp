@@ -150,8 +150,11 @@ void hipe_free_native_stub(void* stub)
 
 void hipe_arch_print_pcb(struct hipe_process_state *p)
 {
-#define U(n,x) \
-    printf(" % 4d | %s | 0x%0*lx | %*s |\r\n", (int)offsetof(struct hipe_process_state,x), n, 2*(int)sizeof(long), (unsigned long)p->x, 2+2*(int)sizeof(long), "")
+#define U(n,x)                                                  \
+    erts_printf(" % 4d | %s | 0x%0*bpx | %*s |\r\n",            \
+                (int)offsetof(struct hipe_process_state,x), n,  \
+                2*(int)sizeof(UWord), (UWord)p->x,              \
+                2+2*(int)sizeof(UWord), "")
     U("nra        ", nra);
     U("narity     ", narity);
 #undef U
