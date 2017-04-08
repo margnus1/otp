@@ -59,7 +59,7 @@ unsigned int HIPE_ARCH_TAILCALL_TO_NATIVE(Process*);
 /* Emulated code throws an exception to its native code caller. */
 unsigned int HIPE_ARCH_THROW_TO_NATIVE(Process*);
 
-static ERTS_INLINE unsigned int max(unsigned int x, unsigned int y)
+static ERTS_INLINE unsigned int unsigned_max(unsigned int x, unsigned int y)
 {
     return (x > y) ? x : y;
 }
@@ -159,7 +159,7 @@ hipe_call_to_native(Process *p, unsigned int arity, Eterm reg[])
 
     if ((nstkargs = arity - NR_ARG_REGS) < 0)
 	nstkargs = 0;
-    hipe_check_nstack(p, max(nstkargs + 1, NR_LEAF_WORDS));
+    hipe_check_nstack(p, unsigned_max(nstkargs + 1, NR_LEAF_WORDS));
     hipe_push_risc_nra_frame(p);			/* needs 1 word */
     hipe_push_risc_params(p, arity, reg);	/* needs nstkargs words */
     return HIPE_ARCH_CALL_TO_NATIVE(p);
@@ -173,7 +173,7 @@ hipe_tailcall_to_native(Process *p, unsigned int arity, Eterm reg[])
 
     if ((nstkargs = arity - NR_ARG_REGS) < 0)
 	nstkargs = 0;
-    hipe_check_nstack(p, max(nstkargs, NR_LEAF_WORDS));
+    hipe_check_nstack(p, unsigned_max(nstkargs, NR_LEAF_WORDS));
     hipe_push_risc_params(p, arity, reg);	/* needs nstkargs words */
     return HIPE_ARCH_TAILCALL_TO_NATIVE(p);
 }

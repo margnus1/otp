@@ -51,7 +51,7 @@ extern unsigned int x86_tailcall_to_native(Process*);
 /* Emulated code throws an exception to its native code caller. */
 extern unsigned int x86_throw_to_native(Process*);
 
-static ERTS_INLINE unsigned int max(unsigned int x, unsigned int y)
+static ERTS_INLINE unsigned int unsigned_max(unsigned int x, unsigned int y)
 {
     return (x > y) ? x : y;
 }
@@ -142,7 +142,7 @@ hipe_call_to_native(Process *p, unsigned int arity, Eterm reg[])
        callee's return address should it need to call inc_stack_0. */
     if ((nstkargs = arity - NR_ARG_REGS) < 0)
 	nstkargs = 0;
-    hipe_check_nstack(p, max(nstkargs+1+1, LEAF_WORDS));
+    hipe_check_nstack(p, unsigned_max(nstkargs+1+1, LEAF_WORDS));
     hipe_push_x86_params(p, arity, reg);	/* needs nstkargs words */
     return x86_call_to_native(p);		/* needs 1+1 words */
 }
@@ -156,7 +156,7 @@ hipe_tailcall_to_native(Process *p, unsigned int arity, Eterm reg[])
     if ((nstkargs = arity - NR_ARG_REGS) < 0)
 	nstkargs = 0;
     /* +1 so callee can call inc_stack_0 */
-    hipe_check_nstack(p, max(nstkargs+1, LEAF_WORDS));
+    hipe_check_nstack(p, unsigned_max(nstkargs+1, LEAF_WORDS));
     if (nstkargs) {
 	Eterm nra;
 	nra = *(p->hipe.nsp++);
