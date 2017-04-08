@@ -138,23 +138,23 @@ static void print_heap(Eterm *pos, Eterm *end)
     printf(" |         H E A P         |\r\n");
     printf(" | %*s | %*s |\r\n",
 	   2+2*(int)sizeof(UWord), "Address",
-	   2+2*(int)sizeof(UWord), "Contents");
+	   2+2*(int)sizeof(Eterm), "Contents");
     printf(" |%s|%s|\r\n", dashes, dashes);
     while (pos < end) {
 	Eterm val = pos[0];
-        erts_printf(" | 0x%0*bpx | 0x%0*bpx | ",
+        erts_printf(" | 0x%0*bpx | 0x%0*bex | ",
                     2*(int)sizeof(UWord), (UWord)pos,
-                    2*(int)sizeof(UWord), (UWord)val);
+                    2*(int)sizeof(Eterm), val);
 	++pos;
 	if (is_arity_value(val))
-	    printf("Arity(%lu)", arityval(val));
+	    erts_printf("Arity(%beu)", arityval(val));
 	else if (is_thing(val)) {
 	    unsigned int ari = thing_arityval(val);
-	    printf("Thing Arity(%u) Tag(%lu)", ari, thing_subtag(val));
+	    erts_printf("Thing Arity(%u) Tag(%beu)", ari, thing_subtag(val));
 	    while (ari) {
-                erts_printf("\r\n | 0x%0*bpx | 0x%0*bpx | THING",
+                erts_printf("\r\n | 0x%0*bpx | 0x%0*bex | THING",
                             2*(int)sizeof(UWord), (UWord)pos,
-                            2*(int)sizeof(UWord), (UWord)*pos);
+                            2*(int)sizeof(Eterm), *pos);
 		++pos;
 		--ari;
 	    }
@@ -182,9 +182,10 @@ void hipe_print_pcb(Process *p)
                 2*(int)sizeof(UWord), (UWord)p->x)
 #undef P
 #define P(n,x) \
-    printf(" % 4d | %s | 0x%0*bpx | 0x%0*bpx |\r\n", \
-           (int)offsetof(Process,x), n, 2*(int)sizeof(UWord), (UWord)p->x, \
-           2*(int)sizeof(UWord), p->x ? (UWord)*(p->x) : -1UL)
+    erts_printf(" % 4d | %s | 0x%0*bpx | 0x%0*bpx |\r\n",               \
+                (int)offsetof(Process,x), n,                            \
+                2*(int)sizeof(UWord), (UWord)p->x,                      \
+                2*(int)sizeof(UWord), p->x ? (UWord)*(p->x) : -1UL)
 
     U("htop       ", htop);
     U("hend       ", hend);

@@ -45,8 +45,8 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
-#ifdef ERTS_SMP
 #include "sys.h"
+#ifdef ERTS_SMP
 #include "erl_alloc.h"
 #endif
 #include "hipe_signal.h"
