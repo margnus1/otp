@@ -50,18 +50,18 @@ struct hipe_sdesc_with_exnra {
     struct hipe_sdesc sdesc;
 };
 
-static __inline__ unsigned int sdesc_fsize(const struct hipe_sdesc *sdesc)
+static ERTS_INLINE unsigned int sdesc_fsize(const struct hipe_sdesc *sdesc)
 {
     return sdesc->fsize;
 }
 
 /* Nr of arguments pushed on stack */
-static __inline__ unsigned int sdesc_arity(const struct hipe_sdesc *sdesc)
+static ERTS_INLINE unsigned int sdesc_arity(const struct hipe_sdesc *sdesc)
 {
     return sdesc->stk_nargs;
 }
 
-static __inline__ unsigned long sdesc_exnra(const struct hipe_sdesc *sdesc)
+static ERTS_INLINE unsigned long sdesc_exnra(const struct hipe_sdesc *sdesc)
 {
     if (sdesc->has_exnra) {
 	const char *tmp;
@@ -90,7 +90,7 @@ extern struct hipe_sdesc *hipe_decode_sdesc(Eterm);
 #define likely(x)	__builtin_expect((x),1)
 #define unlikely(x)	__builtin_expect((x),0)
 
-static __inline__ const struct hipe_sdesc *hipe_find_sdesc(unsigned long ra)
+static ERTS_INLINE const struct hipe_sdesc *hipe_find_sdesc(unsigned long ra)
 {
     unsigned int i = (ra >> HIPE_RA_LSR_COUNT) & hipe_sdesc_table.mask;
     const struct hipe_sdesc *sdesc = hipe_sdesc_table.bucket[i];
@@ -122,7 +122,7 @@ extern int hipe_fill_stacktrace(Process*, int, Eterm**);
 #endif
 
 /* ensure that at least nwords words are available on the native stack */
-static __inline__ void hipe_check_nstack(Process *p, unsigned nwords)
+static ERTS_INLINE void hipe_check_nstack(Process *p, unsigned nwords)
 {
     extern void hipe_inc_nstack(Process *p);
 

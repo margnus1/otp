@@ -186,7 +186,7 @@ void hipe_set_call_trap(Uint *bfun, void *nfun, int is_closure)
     bfun[-4] = (Uint)nfun;
 }
 
-static __inline__ void
+static ERTS_INLINE void
 hipe_push_beam_trap_frame(Process *p, Eterm reg[], unsigned arity)
 {
     if (&p->stop[1] < p->hend && p->stop[1] == hipe_beam_catch_throw) {
@@ -208,7 +208,7 @@ hipe_push_beam_trap_frame(Process *p, Eterm reg[], unsigned arity)
     p->cp = hipe_beam_pc_return;
 }
 
-static __inline__ void hipe_pop_beam_trap_frame(Process *p)
+static ERTS_INLINE void hipe_pop_beam_trap_frame(Process *p)
 {
     ASSERT(p->stop[1] == hipe_beam_catch_throw);
     p->cp = cp_val(p->stop[0]);

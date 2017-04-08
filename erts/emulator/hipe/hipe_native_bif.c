@@ -46,7 +46,7 @@ extern Eterm nbif_impl_hipe_erts_internal_check_process_code_1(NBIF_ALIST_1);
 extern Eterm nbif_impl_hipe_show_nstack_1(NBIF_ALIST_1);
 
 /* Used when a BIF can trigger a stack walk. */
-static __inline__ void hipe_set_narity(Process *p, unsigned int arity)
+static ERTS_INLINE void hipe_set_narity(Process *p, unsigned int arity)
 {
     p->hipe.narity = arity;
 }

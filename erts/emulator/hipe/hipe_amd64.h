@@ -26,7 +26,7 @@
 #undef hipe_arch_name
 
 /* for hipe_bifs_{read,write}_{s,u}64 */
-static __inline__ int hipe_word64_address_ok(void *address)
+static ERTS_INLINE int hipe_word64_address_ok(void *address)
 {
     return 1;
 }
