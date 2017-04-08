@@ -24,6 +24,7 @@
 #endif
 #include "global.h"
 #include "bif.h"
+#include "hipe_win_compat.h"
 #include "hipe_stack.h"
 #ifdef __x86_64__
 #include "hipe_amd64_asm.h"	/* for NR_ARG_REGS */

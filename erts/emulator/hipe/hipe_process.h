@@ -25,6 +25,7 @@
 
 #include "erl_alloc.h"
 #include "export.h"
+#include "hipe_win_compat.h"
 
 struct hipe_process_state {
     Eterm *nsp;			/* Native stack pointer. */

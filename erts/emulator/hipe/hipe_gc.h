@@ -22,20 +22,20 @@
 #ifndef HIPE_GC_H
 #define HIPE_GC_H
 
+#include "hipe_win_compat.h"
+
 #if defined(__sparc__)
 #include "hipe_sparc_gc.h"
-#endif
-#if defined(__i386__)
+#elif defined(__i386__)
 #include "hipe_x86_gc.h"
-#endif
-#if defined(__x86_64__)
+#elif defined(__x86_64__)
 #include "hipe_amd64_gc.h"
-#endif
-#if defined(__powerpc__) || defined(__ppc__) || defined(__powerpc64__)
+#elif defined(__powerpc__) || defined(__ppc__) || defined(__powerpc64__)
 #include "hipe_ppc_gc.h"
-#endif
-#if defined(__arm__)
+#elif defined(__arm__)
 #include "hipe_arm_gc.h"
+#else
+#error "Unsupported CPU Architecture"
 #endif
 
 #endif /* HIPE_GC_H */

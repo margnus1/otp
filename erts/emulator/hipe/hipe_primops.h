@@ -22,6 +22,8 @@
 #ifndef HIPE_PRIMOPS_H
 #define HIPE_PRIMOPS_H
 
+#include "hipe_win_compat.h"
+
 PRIMOP_LIST(am_suspend_msg, &nbif_suspend_msg)
 PRIMOP_LIST(am_suspend_msg_timeout, &nbif_suspend_msg_timeout)
 PRIMOP_LIST(am_suspend_0, &nbif_suspend_0)
@@ -88,18 +90,16 @@ PRIMOP_LIST(am_debug_native_called, &nbif_hipe_bifs_debug_native_called)
 
 #if defined(__sparc__)
 #include "hipe_sparc_primops.h"
-#endif
-#if defined(__i386__)
+#elif defined(__i386__)
 #include "hipe_x86_primops.h"
-#endif
-#if defined(__x86_64__)
+#elif defined(__x86_64__)
 #include "hipe_amd64_primops.h"
-#endif
-#if defined(__powerpc__) || defined(__ppc__) || defined(__powerpc64__)
+#elif defined(__powerpc__) || defined(__ppc__) || defined(__powerpc64__)
 #include "hipe_ppc_primops.h"
-#endif
-#if defined(__arm__)
+#elif defined(__arm__)
 #include "hipe_arm_primops.h"
+#else
+#error "Unsupported CPU Architecture"
 #endif
 
 #endif /* HIPE_PRIMOPS_H */

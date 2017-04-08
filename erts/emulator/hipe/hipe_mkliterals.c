@@ -34,6 +34,7 @@
 #include "error.h"
 #include "erl_bits.h"
 #include "erl_message.h"
+#include "hipe_win_compat.h"
 /* this sucks, but the compiler needs data for all platforms */
 #include "hipe_arm_asm.h"
 #undef P

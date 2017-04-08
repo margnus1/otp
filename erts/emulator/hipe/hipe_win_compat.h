@@ -1,7 +1,7 @@
 /*
  * %CopyrightBegin%
  *
- * Copyright Ericsson AB 2002-2016. All Rights Reserved.
+ * Copyright Ericsson AB 2017. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,26 +17,19 @@
  *
  * %CopyrightEnd%
  */
-/*
- * hipe_signal.h
- *
- * Architecture-specific initialisation of Unix signals.
- */
-#ifndef HIPE_SIGNAL_H
-#define HIPE_SIGNAL_H
 
-#include "hipe_win_compat.h"
 
-#if defined(__i386__) || defined(__x86_64__)
-extern void hipe_signal_init(void);
-#else
-static ERTS_INLINE void hipe_signal_init(void) { }
+#ifndef HIPE_WIN_COMPAT_H
+#define HIPE_WIN_COMPAT_H
+
+#ifdef __WIN32__
+#  if defined(_M_X64)
+#    define __x86_64__ 1
+#  elif defined(_M_X86)
+#    define __i386__ 1
+#  else
+#    error "Unsupported CPU architecture for Windows"
+#  endif
 #endif
 
-#if defined(ERTS_SMP) && (defined(__i386__) || defined(__x86_64__))
-extern void hipe_thread_signal_init(void);
-#else
-static ERTS_INLINE void hipe_thread_signal_init(void) { }
-#endif
-
-#endif /* HIPE_SIGNAL_H */
+#endif /* HIPE_WIN_COMPAT_H */

@@ -22,6 +22,8 @@
 #ifndef HIPE_ARCH_H
 #define HIPE_ARCH_H
 
+#include "hipe_win_compat.h"
+
 extern const void *hipe_arch_primop_address(Eterm key);
 
 /* used by beam_load.c:patch(). patchtype == am_load_fe, Value is an ErlFunEntry* */
@@ -35,26 +37,23 @@ extern void  hipe_free_code(void*, unsigned int);
 extern void *hipe_make_native_stub(void *exp, unsigned int beamArity);
 extern void  hipe_free_native_stub(void*);
 
-
 #if defined(__sparc__)
 #include "hipe_sparc.h"
 #include "hipe_sparc_asm.h"
-#endif
-#if defined(__i386__)
+#elif defined(__i386__)
 #include "hipe_x86.h"
 #include "hipe_x86_asm.h"
-#endif
-#if defined(__x86_64__)
+#elif defined(__x86_64__)
 #include "hipe_amd64.h"
 #include "hipe_amd64_asm.h"
-#endif
-#if defined(__powerpc__) || defined(__ppc__) || defined(__powerpc64__)
+#elif defined(__powerpc__) || defined(__ppc__) || defined(__powerpc64__)
 #include "hipe_ppc.h"
 #include "hipe_ppc_asm.h"
-#endif
-#if defined(__arm__)
+#elif defined(__arm__)
 #include "hipe_arm.h"
 #include "hipe_arm_asm.h"
+#else
+#error "Unsupported CPU Architecture"
 #endif
 
 #if !defined(AEXTERN)
