@@ -40,8 +40,12 @@ check_instrs([I|Is], LiveOut) ->
   Use = ordsets:from_list(hipe_rtl:uses(I)),
   LiveOver = ordsets:subtract(LiveOut, Def),
   LiveIn = ordsets:union(LiveOver, Use),
-  case hipe_rtl:is_call(I) orelse is_record(I, gctest) of
-    false -> ok; true ->
+  case (hipe_rtl:is_call(I)
+        andalso not safe_primop(hipe_rtl:call_fun(I)))
+    orelse is_record(I, gctest)
+  of
+    false -> ok;
+    true ->
       put({?MODULE, instr}, I),
       lists:foreach(fun verify_live/1, LiveOver)
   end,
@@ -54,7 +58,6 @@ verify_live(T) ->
       case hipe_rtl:reg_is_gcsafe(T) of
         true -> ok;
         false ->
-          timer:sleep(2000),
           error({gcunsafe_live_over_call,
                  get({?MODULE, 'fun'}),
                  {label, get({?MODULE, label})},
@@ -62,3 +65,26 @@ verify_live(T) ->
                  T})
       end
   end.
+
+%% Primops that can't gc
+%% Note: This information is essentially duplicated from hipe_bif_list.m4
+safe_primop(is_divisible) -> true;
+safe_primop(cmp_2) -> true;
+safe_primop(eq_2) -> true;
+safe_primop(bs_allocate) -> true;
+safe_primop(bs_reallocate) -> true;
+safe_primop(bs_utf8_size) -> true;
+safe_primop(bs_get_utf8) -> true;
+safe_primop(bs_utf16_size) -> true;
+safe_primop(bs_get_utf16) -> true;
+safe_primop(bs_validate_unicode_retract) -> true;
+safe_primop(bs_put_small_float) -> true;
+safe_primop(bs_put_bits) -> true;
+safe_primop(emasculate_binary) -> true;
+safe_primop(atomic_inc) -> true;
+%% Not noproc but manually verified
+safe_primop(bs_put_big_integer) -> true;
+%% XXX: Only safe along happy path, TODO: verify that nothing is live over other
+%% edges
+safe_primop(bs_validate_unicode) -> true;
+safe_primop(_) -> false.

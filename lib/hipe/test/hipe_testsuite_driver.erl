@@ -165,7 +165,8 @@ run(TestCase, Dir, _OutDir) ->
     %% 		  end, DataFiles),
     %% try
     ok = TestCase:test(),
-    HiPEOpts = try TestCase:hipe_options() catch error:undef -> [] end,
+    HiPEOpts0 = try TestCase:hipe_options() catch error:undef -> [] end,
+    HiPEOpts = HiPEOpts0 ++ hipe_options(),
     {ok, TestCase} = hipe:c(TestCase, HiPEOpts),
     ok = TestCase:test(),
     {ok, TestCase} = hipe:c(TestCase, [o1|HiPEOpts]),
@@ -183,3 +184,6 @@ run(TestCase, Dir, _OutDir) ->
     %% 	lists:foreach(fun (DF) -> ok end, % = file:delete(DF) end,
     %% 		      [filename:join(OutDir, D) || D <- DataFiles])
     %% end.
+
+hipe_options() ->
+    [verify_gcsafe].
