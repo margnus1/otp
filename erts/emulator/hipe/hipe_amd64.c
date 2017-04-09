@@ -27,6 +27,7 @@
 #include "error.h"
 #include "bif.h"
 #include "big.h"	/* term_to_Sint() */
+#include "erl_binary.h"
 
 #include "hipe_arch.h"
 #include "hipe_bif0.h"
@@ -68,18 +69,78 @@ int hipe_patch_insn(void *address, Uint64 value, Eterm type)
     return 0;
 }
 
+static void patch_trampoline(char *trampoline, void *destAddress);
+
 int hipe_patch_call(void *callAddress, void *destAddress, void *trampoline)
 {
     Sint rel32;
 
-    ASSERT(trampoline == NULL);
-
     rel32 = (Sint)destAddress - (Sint)callAddress - 4;
-    if ((Sint)(Sint32)rel32 != rel32)
-	return -1;
+    if ((Sint)(Sint32)rel32 != rel32) {
+        if (trampoline == NULL)
+            return -1;
+        rel32 = (Sint)trampoline - (Sint)callAddress - 4;
+        if((Sint)(Sint32)rel32 != rel32)
+            return -1;
+        patch_trampoline(trampoline, destAddress);
+    }
     *(Uint32*)callAddress = (Uint32)rel32;
     hipe_flush_icache_word(callAddress);
     return 0;
+}
+
+static int check_callees(Eterm callees)
+{
+    Eterm *tuple;
+    Uint arity;
+    Uint i;
+
+    if (is_nil(callees))
+        return 0;
+    if (is_not_tuple(callees))
+	return -1;
+    tuple = tuple_val(callees);
+    arity = arityval(tuple[0]);
+    for (i = 1; i <= arity; ++i) {
+	Eterm mfa = tuple[i];
+	if (is_atom(mfa))
+	    continue;
+	if (is_not_tuple(mfa) ||
+	    tuple_val(mfa)[0] != make_arityval(3) ||
+	    is_not_atom(tuple_val(mfa)[1]) ||
+	    is_not_atom(tuple_val(mfa)[2]) ||
+	    is_not_small(tuple_val(mfa)[3]) ||
+            unsigned_val(tuple_val(mfa)[3]) > 255)
+	    return -1;
+    }
+    return arity;
+}
+
+#define TRAMPOLINE_BYTES 12
+
+static void generate_trampolines(char *address,
+                                 int nrcallees, Eterm callees,
+                                 char **trampvec)
+{
+    char* trampoline = address;
+    int i;
+
+    for (i = 0; i < nrcallees; ++i) {
+        trampoline[0] = 0x48;           /* movabsq $..., %rax */
+        trampoline[1] = 0xb8;
+        *((UWord*)(trampoline+2)) = 0;	/* callee's address */
+        trampoline[10] = 0xff;          /* jmpq *%rax */
+        trampoline[11] = 0xe0;
+        trampvec[i] = trampoline;
+        trampoline += TRAMPOLINE_BYTES;
+    }
+    hipe_flush_icache_range(address, nrcallees*TRAMPOLINE_BYTES);
+}
+
+static void patch_trampoline(char *trampoline, void *destAddress)
+{
+    *((UWord*)(trampoline+2)) = (UWord)destAddress;
+    hipe_flush_icache_word(trampoline+2);
 }
 
 /*
@@ -97,10 +158,26 @@ static void *alloc_code(unsigned int alloc_bytes)
 
 void *hipe_alloc_code(Uint nrbytes, Eterm callees, Eterm *trampolines, Process *p)
 {
-    if (is_not_nil(callees))
+    Eterm trampvecbin;
+    char **trampvec, *address;
+    int nrcallees = check_callees(callees);
+    if (nrcallees < 0)
 	return NULL;
-    *trampolines = NIL;
-    return alloc_code(nrbytes);
+
+    if (is_not_nil(callees)) {
+        trampvecbin = new_binary(p, NULL, nrcallees*sizeof(char*));
+        trampvec = (char**)binary_bytes(trampvecbin);
+    }
+
+    address = alloc_code(nrbytes + nrcallees*TRAMPOLINE_BYTES);
+
+    if (is_not_nil(callees)) {
+        generate_trampolines(address + nrbytes, nrcallees, callees, trampvec);
+        *trampolines = trampvecbin;
+    } else {
+        *trampolines = NIL;
+    }
+    return address;
 }
 
 void hipe_free_code(void* code, unsigned int bytes)
@@ -119,6 +196,11 @@ void *hipe_make_native_stub(void *callee_exp, unsigned int beamArity)
      * movb $Arity, P_ARITY(%ebp)
      * jmp callemu
      *
+     * On Windows, the stub instead of "jmp callemu" ends with
+     *
+     * movabsq callemu, %rax
+     * jmpq *%rax
+     *
      * The stub has variable size, depending on whether the P_CALLEE_EXP
      * and P_ARITY offsets fit in 8-bit signed displacements or not.
      * The rel32 offset in the final jmp depends on its actual location,
@@ -128,10 +210,12 @@ void *hipe_make_native_stub(void *callee_exp, unsigned int beamArity)
      */
     unsigned int codeSize;
     unsigned char *code, *codep;
-    unsigned int callEmuOffset;
 
-    codeSize =	/* 23, 26, 29, or 32 bytes */
-      23 +	/* 23 when all offsets are 8-bit */
+    codeSize =
+      23 +	/* 23 when all offsets are 8-bit and no 64-bit absolute call */
+#ifdef __WIN32__
+        7 +     /* The 64-bit absolute address call is 7 bytes larger */
+#endif
       (P_CALLEE_EXP >= 128 ? 3 : 0) +
       ((P_CALLEE_EXP + 4) >= 128 ? 3 : 0) +
       (P_ARITY >= 128 ? 3 : 0);
@@ -196,18 +280,33 @@ void *hipe_make_native_stub(void *callee_exp, unsigned int beamArity)
     codep[0] = beamArity;
     codep += 1;
 
-    /* jmp callemu; 5 bytes */
-    callEmuOffset = (unsigned char*)nbif_callemu - (code + codeSize);
-    codep[0] = 0xe9;
-    codep[1] =  callEmuOffset        & 0xFF;
-    codep[2] = (callEmuOffset >>  8) & 0xFF;
-    codep[3] = (callEmuOffset >> 16) & 0xFF;
-    codep[4] = (callEmuOffset >> 24) & 0xFF;
-    codep += 5;
+#ifndef __WIN32__
+    {
+        /* jmp callemu; 5 bytes */
+        Sint callEmuOffset = (unsigned char*)nbif_callemu - (code + codeSize);
+        if((Sint)(Sint32)callEmuOffset != callEmuOffset)
+            erts_exit(ERTS_ERROR_EXIT, "%s: nbif_callemu is out of reach for a "
+                      "jmp\r\n", __FUNCTION__);
+        codep[0] = 0xe9;
+        codep[1] =  callEmuOffset        & 0xFF;
+        codep[2] = (callEmuOffset >>  8) & 0xFF;
+        codep[3] = (callEmuOffset >> 16) & 0xFF;
+        codep[4] = (callEmuOffset >> 24) & 0xFF;
+        codep += 5;
+    }
+#else
+    /* movabsq callemu, %rax; jmpq *%rax; 12 bytes */
+    codep[0] = 0x48;
+    codep[1] = 0xb8;
+    *((UWord*)(codep+2)) = (UWord)nbif_callemu;
+    codep[10] = 0xff;
+    codep[11] = 0xe0;
+    codep += 12;
+#endif
 
     ASSERT(codep == code + codeSize);
 
-    /* I-cache flush? */
+    hipe_flush_icache_range(code, codeSize);
 
     return code;
 }
