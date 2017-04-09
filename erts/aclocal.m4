@@ -2754,4 +2754,28 @@ fi
 rm -f conftest*])
 #define UNSAFE_MASK  0xc0000000 /* Mask for bits that must be constant */
 
+dnl ERL_TRY_LINK_ASM(ASMSOURCE, INCLUDES, BODYSRC,
+dnl                  ACTION_IF_FOUND [, ACTION-IF-NOT-FOUND])
+dnl Tries to link an assembly program with a c program
+AC_DEFUN(ERL_TRY_LINK_ASM,
+[asm_compile='$CCAS $CCASFLAGS -c conftest_asm.S -o conftest_asm.o 1>&AC_FD_CC'
+changequote(, )dnl
+cat > conftest_asm.S <<EOF
+$1
+EOF
+changequote([, ])dnl
+if AC_TRY_EVAL(asm_compile) && test -s conftest_asm.o; then
+      save_LDFLAGS="$LDFLAGS"
+      LDFLAGS="$LDFLAGS conftest_asm.o" # apologies for the hack
+      AC_TRY_LINK([$2],[$3],[$4],[$5])
+      LDFLAGS="$save_LDFLAGS"
+else
+   echo "configure: failed program was:" 1>&AC_FD_CC
+   cat conftest_asm.S 1>&AC_FD_CC
+   echo "configure: PATH was $PATH" 1>&AC_FD_CC
+ifelse([$5], , , [  rm -rf conftest*
+  $5
+])dnl
+fi
+rm -f conftest*])
 

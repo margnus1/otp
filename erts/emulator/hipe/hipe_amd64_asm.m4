@@ -82,9 +82,15 @@ ifelse(OPSYS,darwin,``
 #define CSYM(NAME)	NAME
 #define ASYM(NAME)	NAME
 #define GLOBAL(NAME)	.global NAME
+''
+ifelse(OPSYS,win32,``
+#define SET_SIZE(NAME)
+#define TYPE_FUNCTION(NAME)
+'',``
+/* Not Win32 */
 #define SET_SIZE(NAME)	.size NAME,.-NAME
 #define TYPE_FUNCTION(NAME)	.type NAME,@function
-'')dnl
+''))dnl
 
 
 /*

@@ -1220,7 +1220,7 @@ early_init(int *argc, char **argv) /*
     erts_lcnt_late_init();
 #endif
 
-#if defined(HIPE)
+#if defined(HIPE) && !defined(__WIN32__)
     hipe_signal_init();	/* must be done very early */
 #endif
 

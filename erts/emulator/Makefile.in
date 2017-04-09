@@ -259,6 +259,7 @@ TYPE_FLAGS += -DSTATIC_ERLANG_DRIVER
 else
 EMU_CC  = @EMU_CC@
 endif
+CCAS   = @CCAS@
 WFLAGS  = @WFLAGS@
 CFLAGS  = @STATIC_CFLAGS@ $(TYPE_FLAGS) $(FLAVOR_FLAGS) $(DEFS) $(WFLAGS) $(THR_DEFS) $(ARCHCFLAGS) $(GIT_VSN)
 HCC     = @HCC@
@@ -899,9 +900,12 @@ OS_OBJS +=	$(OBJDIR)/erl_mseg.o \
 
 HIPE_ARCH64_OBJS=$(OBJDIR)/hipe_bif64.o
 
-HIPE_x86_OS_OBJS=$(HIPE_x86_$(OPSYS)_OBJS)
-HIPE_x86_OBJS=$(OBJDIR)/hipe_x86.o $(OBJDIR)/hipe_x86_glue.o $(OBJDIR)/hipe_x86_bifs.o $(OBJDIR)/hipe_x86_signal.o $(OBJDIR)/hipe_x86_stack.o $(HIPE_x86_OS_OBJS)
-HIPE_amd64_OBJS=$(OBJDIR)/hipe_amd64.o $(OBJDIR)/hipe_amd64_glue.o $(OBJDIR)/hipe_amd64_bifs.o $(OBJDIR)/hipe_x86_signal.o $(OBJDIR)/hipe_x86_stack.o $(HIPE_ARCH64_OBJS)
+ifneq ($(OPSYS),win32)
+HIPE_x86_OS_OBJS   += $(OBJDIR)/hipe_x86_signal.o
+HIPE_amd64_OS_OBJS += $(OBJDIR)/hipe_x86_signal.o
+endif
+HIPE_x86_OBJS=$(OBJDIR)/hipe_x86.o $(OBJDIR)/hipe_x86_glue.o $(OBJDIR)/hipe_x86_bifs.o $(OBJDIR)/hipe_x86_stack.o $(HIPE_x86_OS_OBJS)
+HIPE_amd64_OBJS=$(OBJDIR)/hipe_amd64.o $(OBJDIR)/hipe_amd64_glue.o $(OBJDIR)/hipe_amd64_bifs.o $(OBJDIR)/hipe_x86_stack.o $(HIPE_ARCH64_OBJS) $(HIPE_amd64_OS_OBJS)
 HIPE_ultrasparc_OBJS=$(OBJDIR)/hipe_sparc.o $(OBJDIR)/hipe_sparc_glue.o $(OBJDIR)/hipe_sparc_bifs.o $(OBJDIR)/hipe_risc_stack.o
 HIPE_ppc_OBJS=$(OBJDIR)/hipe_ppc.o $(OBJDIR)/hipe_ppc_glue.o $(OBJDIR)/hipe_ppc_bifs.o $(OBJDIR)/hipe_risc_stack.o
 HIPE_ppc64_OBJS=$(HIPE_ppc_OBJS) $(HIPE_ARCH64_OBJS)
@@ -955,10 +959,10 @@ $(TTF_DIR)/%.h: hipe/%.m4
 	$(m4_verbose)m4 $(M4FLAGS) $< > $@
 
 $(OBJDIR)/%.o: $(TTF_DIR)/%.S
-	$(V_CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
+	$(V_CCAS) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
 $(OBJDIR)/%.o: hipe/%.S
-	$(V_CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
+	$(V_CCAS) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
 $(OBJDIR)/%.o: hipe/%.c
 	$(V_CC) $(subst O2,O3, $(CFLAGS)) $(INCLUDES) -c $< -o $@

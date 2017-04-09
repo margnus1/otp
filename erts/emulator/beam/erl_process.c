@@ -8774,7 +8774,7 @@ sched_thread_func(void *vesdp)
     erts_proc_lock_prepare_proc_lock_waiter();
 #endif
 
-#ifdef HIPE
+#if defined(HIPE) && !defined(__WIN32__)
     hipe_thread_signal_init();
 #endif
     erts_thread_init_float();
@@ -8835,7 +8835,7 @@ sched_dirty_cpu_thread_func(void *vesdp)
 
     erts_proc_lock_prepare_proc_lock_waiter();
 
-#ifdef HIPE
+#if defined(HIPE) && !defined(__WIN32__)
     hipe_thread_signal_init();
 #endif
     erts_thread_init_float();
@@ -8884,7 +8884,7 @@ sched_dirty_io_thread_func(void *vesdp)
 
     erts_proc_lock_prepare_proc_lock_waiter();
 
-#ifdef HIPE
+#if defined(HIPE) && !defined(__WIN32__)
     hipe_thread_signal_init();
 #endif
     erts_thread_init_float();

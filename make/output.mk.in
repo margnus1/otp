@@ -84,6 +84,10 @@ emu_cc_verbose_0 = @echo " EMU_CC	"$@;
 emu_cc_verbose = $(emu_cc_verbose_$(V))
 V_EMU_CC = $(emu_cc_verbose)$(EMU_CC)
 
+ccas_verbose_0 = @echo " CCAS	"$@;
+ccas_verbose = $(ccas_verbose_$(V))
+V_CCAS = $(ccas_verbose)$(CCAS)
+
 erlc_verbose_0 = @echo " ERLC	"$@;
 erlc_verbose = $(erlc_verbose_$(V))
 V_ERLC = $(erlc_verbose)$(ERLC)

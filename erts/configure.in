@@ -3433,7 +3433,83 @@ case $host_os in
 	;;
 esac
 
-
+dnl HiPE needs an assembler that understands gnu syntax and is compatible with
+dnl the chosen linker
+if test X${enable_hipe} != Xno; then
+    if test "X${CCAS}" = X; then
+        CCAS="$CC"
+        CCASFLAGS="$CFLAGS"
+    fi
+    AC_MSG_CHECKING([whether $CCAS can assemble gnu syntax])
+    ERL_TRY_LINK_ASM([
+        .data
+        .global res
+        .global _res
+        .global .res
+    #ifdef NOTDEF
+        intentional error
+    #endif
+    res:
+    _res:
+    .res:
+        .byte 0
+    ],[],[
+        extern char res;
+        return res;
+    ],[assembler_works=yes],[assembler_works=no])
+    AC_MSG_RESULT([$assembler_works])
+    if test X${assembler_works} != Xyes; then
+        CCAS=no
+        for ac_progname in gcc; do
+              IFS="${IFS= 	}"; ac_save_ifs="$IFS"; IFS=":"
+              ac_dummy="$PATH"
+              for ac_dir in $ac_dummy; do
+                    test -z "$ac_dir" && ac_dir=.
+                    if test -f "$ac_dir/$ac_progname"; then
+                          CCAS="$ac_dir/$ac_progname"
+                          break
+                    fi
+              done
+              IFS="$ac_save_ifs"
+            if test "$CCAS" != no; then
+                break
+            fi
+        done
+        CCASFLAGS="-c"
+        if test "X${CCAS}" != Xno; then
+            AC_MSG_CHECKING([whether $CCAS can assemble gnu syntax])
+                ERL_TRY_LINK_ASM([
+                    .data
+                    .global res
+                    .global _res
+                    .global .res
+                #ifdef NOTDEF
+                    intentional error
+                #endif
+                res:
+                _res:
+                .res:
+                    .byte 0
+                ],[],[
+                    extern char res;
+                    return res;
+                ],[assembler_works=yes],[assembler_works=no])
+            AC_MSG_RESULT([$assembler_works])
+        fi
+    fi
+    if test X${assembler_works} != Xyes; then
+        if test X${enable_hipe} = Xyes; then
+            AC_MSG_ERROR([HiPE needs an assembler that understands GNU syntax])
+        else
+            enable_hipe=no
+            CCAS=
+            CCASFLAGS=
+            AC_MSG_WARN([Disable HiPE due to lack of assembler that understands GNU syntax])
+        fi
+    fi
+fi
+AC_SUBST(CCAS)
+AC_SUBST(CCASFLAGS)
 
 dnl ----------------------------------------------------------------------
 dnl Tests related to configurable options given on command line
