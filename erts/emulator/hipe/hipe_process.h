@@ -60,7 +60,17 @@ struct hipe_process_state {
 
 extern void hipe_arch_print_pcb(struct hipe_process_state *p);
 
-static ERTS_INLINE void hipe_init_process(struct hipe_process_state *p)
+ERTS_GLB_INLINE void hipe_init_process(struct hipe_process_state *p);
+ERTS_GLB_INLINE void hipe_delete_process(struct hipe_process_state *p);
+#ifdef ERTS_SMP
+struct hipe_process_state_smp {
+    int have_receive_locks;
+};
+ERTS_GLB_INLINE void hipe_init_process_smp(struct hipe_process_state_smp *p);
+#endif
+
+#if ERTS_GLB_INLINE_INCL_FUNC_DEF
+ERTS_GLB_INLINE void hipe_init_process(struct hipe_process_state *p)
 {
     p->nsp = NULL;
     p->nstack = NULL;
@@ -77,21 +87,19 @@ static ERTS_INLINE void hipe_init_process(struct hipe_process_state *p)
 #endif
 }
 
-static ERTS_INLINE void hipe_delete_process(struct hipe_process_state *p)
+ERTS_GLB_INLINE void hipe_delete_process(struct hipe_process_state *p)
 {
     if (p->nstack)
 	erts_free(ERTS_ALC_T_HIPE_STK, (void*)p->nstack);
 }
 
 #ifdef ERTS_SMP
-struct hipe_process_state_smp {
-    int have_receive_locks;
-};
-
-static ERTS_INLINE void hipe_init_process_smp(struct hipe_process_state_smp *p)
+ERTS_GLB_INLINE void hipe_init_process_smp(struct hipe_process_state_smp *p)
 {
     p->have_receive_locks = 0;
 }
 #endif
+
+#endif /* ERTS_GLB_INLINE_INCL_FUNC_DEF */
 
 #endif /* HIPE_PROCESS_H */

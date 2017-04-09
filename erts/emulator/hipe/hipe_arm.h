@@ -29,10 +29,13 @@ extern void hipe_flush_icache_range(void *address, unsigned int nbytes);
 #define HIPE_RA_LSR_COUNT	2	/* low 2 bits are always zero */
 
 /* for hipe_bifs_{read,write}_{s,u}32 */
-static ERTS_INLINE int hipe_word32_address_ok(void *address)
+ERTS_GLB_INLINE int hipe_word32_address_ok(void *address);
+#if ERTS_GLB_INLINE_INCL_FUNC_DEF
+ERTS_GLB_INLINE int hipe_word32_address_ok(void *address)
 {
     return ((UWord)address & 0x3) == 0;
 }
+#endif
 
 /* Native stack growth direction. */
 #define HIPE_NSTACK_GROWS_DOWN

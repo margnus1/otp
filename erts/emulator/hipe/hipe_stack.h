@@ -50,18 +50,26 @@ struct hipe_sdesc_with_exnra {
     struct hipe_sdesc sdesc;
 };
 
-static ERTS_INLINE unsigned int sdesc_fsize(const struct hipe_sdesc *sdesc)
+ERTS_GLB_INLINE unsigned int sdesc_fsize(const struct hipe_sdesc *sdesc);
+#if ERTS_GLB_INLINE_INCL_FUNC_DEF
+ERTS_GLB_INLINE unsigned int sdesc_fsize(const struct hipe_sdesc *sdesc)
 {
     return sdesc->fsize;
 }
+#endif
 
 /* Nr of arguments pushed on stack */
-static ERTS_INLINE unsigned int sdesc_arity(const struct hipe_sdesc *sdesc)
+ERTS_GLB_INLINE unsigned int sdesc_arity(const struct hipe_sdesc *sdesc);
+#if ERTS_GLB_INLINE_INCL_FUNC_DEF
+ERTS_GLB_INLINE unsigned int sdesc_arity(const struct hipe_sdesc *sdesc)
 {
     return sdesc->stk_nargs;
 }
+#endif
 
-static ERTS_INLINE UWord sdesc_exnra(const struct hipe_sdesc *sdesc)
+ERTS_GLB_INLINE UWord sdesc_exnra(const struct hipe_sdesc *sdesc);
+#if ERTS_GLB_INLINE_INCL_FUNC_DEF
+ERTS_GLB_INLINE UWord sdesc_exnra(const struct hipe_sdesc *sdesc)
 {
     if (sdesc->has_exnra) {
 	const char *tmp;
@@ -70,6 +78,7 @@ static ERTS_INLINE UWord sdesc_exnra(const struct hipe_sdesc *sdesc)
     }
     return 0;
 }
+#endif
 
 struct hipe_sdesc_table {
     unsigned int log2size;
@@ -90,7 +99,9 @@ extern struct hipe_sdesc *hipe_decode_sdesc(Eterm);
 #define likely(x)	__builtin_expect((x),1)
 #define unlikely(x)	__builtin_expect((x),0)
 
-static ERTS_INLINE const struct hipe_sdesc *hipe_find_sdesc(UWord ra)
+ERTS_GLB_INLINE const struct hipe_sdesc *hipe_find_sdesc(UWord ra);
+#if ERTS_GLB_INLINE_INCL_FUNC_DEF
+ERTS_GLB_INLINE const struct hipe_sdesc *hipe_find_sdesc(UWord ra)
 {
     unsigned int i = (ra >> HIPE_RA_LSR_COUNT) & hipe_sdesc_table.mask;
     const struct hipe_sdesc *sdesc = hipe_sdesc_table.bucket[i];
@@ -101,6 +112,7 @@ static ERTS_INLINE const struct hipe_sdesc *hipe_find_sdesc(UWord ra)
     } while (sdesc->bucket.hvalue != ra);
     return sdesc;
 }
+#endif
 
 AEXTERN(void,nbif_stack_trap_ra,(void));
 
@@ -122,13 +134,16 @@ extern int hipe_fill_stacktrace(Process*, int, Eterm**);
 #endif
 
 /* ensure that at least nwords words are available on the native stack */
-static ERTS_INLINE void hipe_check_nstack(Process *p, unsigned nwords)
+ERTS_GLB_INLINE void hipe_check_nstack(Process *p, unsigned nwords);
+#if ERTS_GLB_INLINE_INCL_FUNC_DEF
+ERTS_GLB_INLINE void hipe_check_nstack(Process *p, unsigned nwords)
 {
     extern void hipe_inc_nstack(Process *p);
 
     while (hipe_nstack_avail(p) < nwords)
 	hipe_inc_nstack(p);
 }
+#endif
 
 /*
  * GC support procedures

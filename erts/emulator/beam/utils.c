@@ -55,6 +55,8 @@
 #include "erl_time.h"
 #ifdef HIPE
 #  include "hipe_mode_switch.h"
+#  include "hipe_arch.h"
+#  include "hipe_process.h"
 #endif
 #define ERTS_WANT_NFUNC_SCHED_INTERNALS__
 #include "erl_nfunc_sched.h"

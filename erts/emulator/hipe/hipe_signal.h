@@ -30,13 +30,19 @@
 #if defined(__i386__) || defined(__x86_64__)
 extern void hipe_signal_init(void);
 #else
-static ERTS_INLINE void hipe_signal_init(void) { }
+ERTS_GLB_INLINE void hipe_signal_init(void);
+#  if ERTS_GLB_INLINE_INCL_FUNC_DEF
+ERTS_GLB_INLINE void hipe_signal_init(void) { }
+#  endif
 #endif
 
 #if defined(ERTS_SMP) && (defined(__i386__) || defined(__x86_64__))
 extern void hipe_thread_signal_init(void);
 #else
-static ERTS_INLINE void hipe_thread_signal_init(void) { }
+ERTS_GLB_INLINE void hipe_thread_signal_init(void);
+#  if ERTS_GLB_INLINE_INCL_FUNC_DEF
+ERTS_GLB_INLINE void hipe_thread_signal_init(void) { }
+#  endif
 #endif
 
 #endif /* HIPE_SIGNAL_H */

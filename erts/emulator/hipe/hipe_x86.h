@@ -22,27 +22,34 @@
 #ifndef HIPE_X86_H
 #define HIPE_X86_H
 
-static ERTS_INLINE void hipe_flush_icache_word(void *address)
+ERTS_GLB_INLINE void hipe_flush_icache_word(void *address);
+ERTS_GLB_INLINE void hipe_flush_icache_range(void *address, unsigned int nbytes);
+
+/* for stack descriptor hash lookup */
+#define HIPE_RA_LSR_COUNT	0	/* all bits are significant */
+
+/* for hipe_bifs_{read,write}_{s,u}32 */
+ERTS_GLB_INLINE int hipe_word32_address_ok(void *address);
+
+#if ERTS_GLB_INLINE_INCL_FUNC_DEF
+ERTS_GLB_INLINE void hipe_flush_icache_word(void *address)
 {
     /* Do nothing. This works as long as compiled code is
        executed by a single CPU thread. */
 }
 
-static ERTS_INLINE void
+ERTS_GLB_INLINE void
 hipe_flush_icache_range(void *address, unsigned int nbytes)
 {
     /* Do nothing. This works as long as compiled code is
        executed by a single CPU thread. */
 }
 
-/* for stack descriptor hash lookup */
-#define HIPE_RA_LSR_COUNT	0	/* all bits are significant */
-
-/* for hipe_bifs_{read,write}_{s,u}32 */
-static ERTS_INLINE int hipe_word32_address_ok(void *address)
+ERTS_GLB_INLINE int hipe_word32_address_ok(void *address)
 {
     return 1;
 }
+#endif /* ERTS_GLB_INLINE_INCL_FUNC_DEF */
 
 /* Native stack growth direction. */
 #define HIPE_NSTACK_GROWS_DOWN

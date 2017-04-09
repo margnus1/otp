@@ -26,10 +26,13 @@
 #undef hipe_arch_name
 
 /* for hipe_bifs_{read,write}_{s,u}64 */
-static ERTS_INLINE int hipe_word64_address_ok(void *address)
+ERTS_GLB_INLINE int hipe_word64_address_ok(void *address);
+#if ERTS_GLB_INLINE_INCL_FUNC_DEF
+ERTS_GLB_INLINE int hipe_word64_address_ok(void *address)
 {
     return 1;
 }
+#endif
 
 #define hipe_arch_name	am_amd64
 

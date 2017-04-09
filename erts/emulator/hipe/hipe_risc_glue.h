@@ -59,12 +59,34 @@ unsigned int HIPE_ARCH_TAILCALL_TO_NATIVE(Process*);
 /* Emulated code throws an exception to its native code caller. */
 unsigned int HIPE_ARCH_THROW_TO_NATIVE(Process*);
 
-static ERTS_INLINE unsigned int unsigned_max(unsigned int x, unsigned int y)
+ERTS_GLB_INLINE const void *hipe_closure_stub_address(unsigned int arity);
+ERTS_GLB_INLINE unsigned int hipe_throw_to_native(Process *p);
+ERTS_GLB_INLINE unsigned int hipe_return_to_native(Process *p);
+ERTS_GLB_INLINE void hipe_pop_params(Process *p, unsigned int arity, Eterm reg[]);
+ERTS_GLB_INLINE int hipe_bifcall_from_native_is_recursive(Process *p);
+ERTS_GLB_INLINE int hipe_trap_from_native_is_recursive(Process *p);
+ERTS_GLB_INLINE int hipe_call_from_native_is_recursive(Process *p, Eterm reg[]);
+ERTS_GLB_INLINE void hipe_throw_from_native(Process *p);
+ERTS_GLB_INLINE void hipe_return_from_native(Process *p);
+ERTS_GLB_INLINE unsigned int hipe_tailcall_to_native(Process *p, unsigned int arity, Eterm reg[]);
+ERTS_GLB_INLINE unsigned int hipe_call_to_native(Process *p, unsigned int arity, Eterm reg[]);
+ERTS_GLB_INLINE void hipe_pop_risc_params(Process *p, unsigned int arity, Eterm reg[]);
+ERTS_GLB_INLINE void hipe_push_risc_params(Process *p, unsigned int arity, Eterm reg[]);
+ERTS_GLB_INLINE void hipe_read_risc_regs(Process *p, unsigned int arity, Eterm reg[]);
+ERTS_GLB_INLINE void hipe_write_risc_regs(Process *p, unsigned int arity, Eterm reg[]);
+ERTS_GLB_INLINE void hipe_pop_risc_nra_frame(Process *p);
+ERTS_GLB_INLINE void hipe_push_risc_nra_frame(Process *p);
+ERTS_GLB_INLINE void hipe_arch_glue_init(void);
+ERTS_GLB_INLINE unsigned int unsigned_max(unsigned int x, unsigned int y);
+
+#if ERTS_GLB_INLINE_INCL_FUNC_DEF
+
+ERTS_GLB_INLINE unsigned int unsigned_max(unsigned int x, unsigned int y)
 {
     return (x > y) ? x : y;
 }
 
-static ERTS_INLINE void hipe_arch_glue_init(void)
+ERTS_GLB_INLINE void hipe_arch_glue_init(void)
 {
     static struct hipe_sdesc_with_exnra nbif_return_sdesc;
 
@@ -80,20 +102,20 @@ static ERTS_INLINE void hipe_arch_glue_init(void)
     hipe_init_sdesc_table(&nbif_return_sdesc.sdesc);
 }
 
-static ERTS_INLINE void hipe_push_risc_nra_frame(Process *p)
+ERTS_GLB_INLINE void hipe_push_risc_nra_frame(Process *p)
 {
     p->hipe.nsp -= 1;
     p->hipe.nsp[0] = (Eterm)p->hipe.nra;
 }
 
-static ERTS_INLINE void hipe_pop_risc_nra_frame(Process *p)
+ERTS_GLB_INLINE void hipe_pop_risc_nra_frame(Process *p)
 {
     p->hipe.nra = (void(*)(void))p->hipe.nsp[0];
     p->hipe.nsp += 1;
 }
 
 /* PRE: arity <= NR_ARG_REGS */
-static ERTS_INLINE void
+ERTS_GLB_INLINE void
 hipe_write_risc_regs(Process *p, unsigned int arity, Eterm reg[])
 {
 #if NR_ARG_REGS > 0
@@ -104,7 +126,7 @@ hipe_write_risc_regs(Process *p, unsigned int arity, Eterm reg[])
 }
 
 /* PRE: arity <= NR_ARG_REGS */
-static ERTS_INLINE void
+ERTS_GLB_INLINE void
 hipe_read_risc_regs(Process *p, unsigned int arity, Eterm reg[])
 {
 #if NR_ARG_REGS > 0
@@ -114,7 +136,7 @@ hipe_read_risc_regs(Process *p, unsigned int arity, Eterm reg[])
 #endif
 }
 
-static ERTS_INLINE void
+ERTS_GLB_INLINE void
 hipe_push_risc_params(Process *p, unsigned int arity, Eterm reg[])
 {
     unsigned int i;
@@ -133,7 +155,7 @@ hipe_push_risc_params(Process *p, unsigned int arity, Eterm reg[])
     hipe_write_risc_regs(p, i, reg);
 }
 
-static ERTS_INLINE void
+ERTS_GLB_INLINE void
 hipe_pop_risc_params(Process *p, unsigned int arity, Eterm reg[])
 {
     unsigned int i;
@@ -152,7 +174,7 @@ hipe_pop_risc_params(Process *p, unsigned int arity, Eterm reg[])
 }
 
 /* BEAM recursively calls native code. */
-static ERTS_INLINE unsigned int
+ERTS_GLB_INLINE unsigned int
 hipe_call_to_native(Process *p, unsigned int arity, Eterm reg[])
 {
     int nstkargs;
@@ -166,7 +188,7 @@ hipe_call_to_native(Process *p, unsigned int arity, Eterm reg[])
 }
 
 /* Native called BEAM, which now tailcalls native. */
-static ERTS_INLINE unsigned int
+ERTS_GLB_INLINE unsigned int
 hipe_tailcall_to_native(Process *p, unsigned int arity, Eterm reg[])
 {
     int nstkargs;
@@ -179,13 +201,13 @@ hipe_tailcall_to_native(Process *p, unsigned int arity, Eterm reg[])
 }
 
 /* BEAM called native, which has returned. Clean up. */
-static ERTS_INLINE void hipe_return_from_native(Process *p)
+ERTS_GLB_INLINE void hipe_return_from_native(Process *p)
 {
     hipe_pop_risc_nra_frame(p);
 }
 
 /* BEAM called native, which has thrown an exception. Clean up. */
-static ERTS_INLINE void hipe_throw_from_native(Process *p)
+ERTS_GLB_INLINE void hipe_throw_from_native(Process *p)
 {
     hipe_pop_risc_nra_frame(p);
 }
@@ -194,7 +216,7 @@ static ERTS_INLINE void hipe_throw_from_native(Process *p)
    Move the parameters to reg[].
    Return zero if this is a tailcall, non-zero if the call is recursive.
    If tailcall, also clean up native stub continuation. */
-static ERTS_INLINE int
+ERTS_GLB_INLINE int
 hipe_call_from_native_is_recursive(Process *p, Eterm reg[])
 {
     hipe_pop_risc_params(p, p->arity, reg);
@@ -207,7 +229,7 @@ hipe_call_from_native_is_recursive(Process *p, Eterm reg[])
 /* BEAM called native, which called BIF that returned trap
  * Discard bif parameters.
  * If tailcall, also clean up native stub continuation. */
-static ERTS_INLINE int
+ERTS_GLB_INLINE int
 hipe_trap_from_native_is_recursive(Process *p)
 {
     if (p->hipe.narity > NR_ARG_REGS) {
@@ -221,7 +243,7 @@ hipe_trap_from_native_is_recursive(Process *p)
 
 /* Native called BIF. Is it a recursive call?
    i.e should we return back to native when BIF is done? */
-static ERTS_INLINE int
+ERTS_GLB_INLINE int
 hipe_bifcall_from_native_is_recursive(Process *p)
 {
     return (p->hipe.nra != (void(*)(void))&nbif_return);
@@ -232,26 +254,26 @@ hipe_bifcall_from_native_is_recursive(Process *p)
    This differs from hipe_call_from_native_is_recursive() in
    that it doesn't check for or pop the BEAM-calls-native frame.
    It's currently only used in the implementation of apply. */
-static ERTS_INLINE void
+ERTS_GLB_INLINE void
 hipe_pop_params(Process *p, unsigned int arity, Eterm reg[])
 {
     hipe_pop_risc_params(p, arity, reg);
 }
 
 /* Native called BEAM, which now returns back to native. */
-static ERTS_INLINE unsigned int hipe_return_to_native(Process *p)
+ERTS_GLB_INLINE unsigned int hipe_return_to_native(Process *p)
 {
     return HIPE_ARCH_RETURN_TO_NATIVE(p);
 }
 
 /* Native called BEAM, which now throws an exception back to native. */
-static ERTS_INLINE unsigned int hipe_throw_to_native(Process *p)
+ERTS_GLB_INLINE unsigned int hipe_throw_to_native(Process *p)
 {
     return HIPE_ARCH_THROW_TO_NATIVE(p);
 }
 
 /* Return the address of a stub switching a native closure call to BEAM. */
-static ERTS_INLINE const void *hipe_closure_stub_address(unsigned int arity)
+ERTS_GLB_INLINE const void *hipe_closure_stub_address(unsigned int arity)
 {
 #if NR_ARG_REGS == 0
     return &nbif_ccallemu0;
@@ -291,5 +313,7 @@ static ERTS_INLINE const void *hipe_closure_stub_address(unsigned int arity)
     }
 #endif	/* > 0 */
 }
+
+#endif /* ERTS_GLB_INLINE_INCL_FUNC_DEF */
 
 #endif /* HIPE_RISC_GLUE_H */

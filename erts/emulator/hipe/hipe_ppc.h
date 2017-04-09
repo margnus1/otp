@@ -22,7 +22,9 @@
 #ifndef HIPE_PPC_H
 #define HIPE_PPC_H
 
-static ERTS_INLINE void hipe_flush_icache_word(void *address)
+ERTS_GLB_INLINE void hipe_flush_icache_word(void *address);
+#if ERTS_GLB_INLINE_INCL_FUNC_DEF
+ERTS_GLB_INLINE void hipe_flush_icache_word(void *address)
 {
     asm volatile("dcbst 0,%0\n"
 		 "\tsync\n"
@@ -33,24 +35,31 @@ static ERTS_INLINE void hipe_flush_icache_word(void *address)
 		 : "r"(address)
 		 : "memory");
 }
+#endif
 
 extern void hipe_flush_icache_range(void *address, unsigned int nbytes);
 
 /* for stack descriptor hash lookup */
 #define HIPE_RA_LSR_COUNT	2	/* low 2 bits are always zero */
 
+ERTS_GLB_INLINE int hipe_word32_address_ok(void *address);
+#if ERTS_GLB_INLINE_INCL_FUNC_DEF
 /* for hipe_bifs_{read,write}_{s,u}32 */
-static ERTS_INLINE int hipe_word32_address_ok(void *address)
+ERTS_GLB_INLINE int hipe_word32_address_ok(void *address)
 {
     return ((UWord)address & 0x3) == 0;
 }
+#endif
 
 #if defined(__powerpc64__)
 /* for hipe_bifs_{read,write}_{s,u}64 */
-static ERTS_INLINE int hipe_word64_address_ok(void *address)
+ERTS_GLB_INLINE int hipe_word64_address_ok(void *address);
+#  if ERTS_GLB_INLINE_INCL_FUNC_DEF
+ERTS_GLB_INLINE int hipe_word64_address_ok(void *address)
 {
     return ((UWord)address & 0x7) == 0;
 }
+#  endif
 #endif
 
 /* Native stack growth direction. */

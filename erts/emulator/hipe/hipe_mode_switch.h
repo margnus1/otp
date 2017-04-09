@@ -70,8 +70,6 @@ extern Uint hipe_beam_pc_return[];
 extern Uint hipe_beam_pc_throw[];
 extern Uint hipe_beam_pc_resume[];
 
-#if ERTS_GLB_INLINE_INCL_FUNC_DEF
-
 #include "erl_gc.h"
 #include "hipe_stack.h"
 
@@ -90,6 +88,8 @@ extern Uint hipe_beam_pc_resume[];
 #endif
 
 extern Eterm hipe_beam_catch_throw;
+
+#if ERTS_GLB_INLINE_INCL_FUNC_DEF
 
 ERTS_GLB_INLINE void hipe_reserve_beam_trap_frame(Process *p, Eterm reg[], unsigned arity)
 {
