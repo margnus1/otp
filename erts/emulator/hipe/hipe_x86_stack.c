@@ -61,9 +61,7 @@ void hipe_print_nstack(Process *p)
     unsigned int mask;
     unsigned int sdesc_size;
     unsigned int i;
-    static const char dashes[2*sizeof(UWord)+5] = {
-	[0 ... 2*sizeof(UWord)+3] = '-'
-    };
+    static const char dashes[2*sizeof(UWord)+5] = { '-' };
 
     nsp = p->hipe.nsp;
     nsp_end = p->hipe.nstend;

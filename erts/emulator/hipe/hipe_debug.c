@@ -39,17 +39,11 @@
 #include "hipe_debug.h"
 #include "erl_map.h"
 
-static const char dashes[2*sizeof(UWord)+5] = {
-    [0 ... 2*sizeof(UWord)+3] = '-'
-};
+static const char dashes[2*sizeof(UWord)+5] = { '-' };
 
-static const char dots[2*sizeof(UWord)+5] = {
-    [0 ... 2*sizeof(UWord)+3] = '.'
-};
+static const char dots[2*sizeof(UWord)+5] = { '.' };
 
-static const char stars[2*sizeof(UWord)+5] = {
-    [0 ... 2*sizeof(UWord)+3] = '*'
-};
+static const char stars[2*sizeof(UWord)+5] = { '*' };
 
 extern Uint beam_apply[];
 

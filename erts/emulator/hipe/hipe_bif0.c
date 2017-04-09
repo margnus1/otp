@@ -465,7 +465,7 @@ BIF_RETTYPE hipe_bifs_alloc_data_3(BIF_ALIST_3)
     stp->data_segment = erts_alloc(ERTS_ALC_T_HIPE_LL, stp->data_segment_size);
 
     /* Align the pointer */
-    aligned_block = (void*)((UWord)(stp->data_segment + align - 1)
+    aligned_block = (void*)((UWord)((byte*)stp->data_segment + align - 1)
 			    & ~(UWord)(align-1));
     BIF_RET(address_to_term(aligned_block, BIF_P));
 }
@@ -1920,8 +1920,8 @@ void hipe_patch_address(Uint *address, Eterm patchtype, Uint value)
 	hipe_patch_load_fe(address, value);
 	return;
       default:
-	fprintf(stderr, "%s: unknown patchtype %#lx\r\n",
-		__FUNCTION__, patchtype);
+	erts_fprintf(stderr, "%s: unknown patchtype %#bex\r\n",
+                     __FUNCTION__, patchtype);
 	return;
     }
 }

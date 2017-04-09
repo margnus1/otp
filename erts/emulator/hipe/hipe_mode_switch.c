@@ -65,10 +65,10 @@ extern BeamInstr beam_exit[];
 
 #if HIPE_DEBUG > 1	/* include DPRINTF() logging */
 
-#define DPRINTF(fmt, args...) \
+#define DPRINTF(fmt, ...) \
 do { \
     if (hipe_modeswitch_debug > 0) { \
-	printf("%s, line %u: " fmt "\r\n", __FUNCTION__, __LINE__ , ##args); \
+	printf("%s, line %u: " fmt "\r\n", __FUNCTION__, __LINE__ , ##__VA_ARGS__); \
 	fflush(stdout); \
     } \
 } while (0)
@@ -100,7 +100,7 @@ static const char *code_str(unsigned code)
 
 #else	/* HIPE_DEBUG > 1 */
 
-#define DPRINTF(fmt, args...)	do{}while(0)
+#define DPRINTF(fmt, ...)	do{}while(0)
 
 #endif	/* HIPE_DEBUG > 1 */
 
