@@ -34,7 +34,11 @@ ERTS_GLB_INLINE int hipe_word64_address_ok(void *address)
 }
 #endif
 
-#define hipe_arch_name	am_amd64
+#ifdef __WIN32__
+#  define hipe_arch_name	am_amd64_win
+#else
+#  define hipe_arch_name	am_amd64
+#endif
 
 extern const Uint sse2_fnegate_mask[];
 

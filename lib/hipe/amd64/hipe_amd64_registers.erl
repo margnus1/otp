@@ -91,12 +91,21 @@ heap_limit_offset() -> ?P_HP_LIMIT.
 -define(HEAP_LIMIT,       ?AMD64_HEAP_LIMIT_REGISTER).
 -define(LAST_PRECOLOURED, 17).
 
--define(ARG0, ?RSI).
--define(ARG1, ?RDX).
--define(ARG2, ?RCX).
--define(ARG3, ?R8).
--define(ARG4, ?R9).
--define(ARG5, ?RDI).
+%% Unix version
+-define(UARG0, ?RSI).
+-define(UARG1, ?RDX).
+-define(UARG2, ?RCX).
+-define(UARG3, ?R8).
+-define(UARG4, ?R9).
+-define(UARG5, ?RDI).
+
+%% Windows version
+-define(WARG0, ?RDX).
+-define(WARG1, ?R8).
+-define(WARG2, ?R9).
+-define(WARG3, ?RBX).
+-define(WARG4, ?RSI).
+-define(WARG5, ?RDI).
 
 -define(TEMP0, ?R14).
 -define(TEMP1, ?R13).
@@ -208,24 +217,49 @@ allocatable_x87() ->
 nr_args() -> ?AMD64_NR_ARG_REGS.
 
 arg(N) when N < ?AMD64_NR_ARG_REGS ->
-  case N of
-    0 -> ?ARG0;
-    1 -> ?ARG1;
-    2 -> ?ARG2;
-    3 -> ?ARG3;
-    4 -> ?ARG4;
-    5 -> ?ARG5
+  case get(hipe_target_arch) of
+    amd64 ->
+      case N of
+        0 -> ?UARG0;
+        1 -> ?UARG1;
+        2 -> ?UARG2;
+        3 -> ?UARG3;
+        4 -> ?UARG4;
+        5 -> ?UARG5
+      end;
+    amd64_win ->
+      case N of
+        0 -> ?WARG0;
+        1 -> ?WARG1;
+        2 -> ?WARG2;
+        3 -> ?WARG3;
+        4 -> ?WARG4;
+        5 -> ?WARG5
+      end
   end.
 
 is_arg(R) ->
-  case R of
-    ?ARG0 -> ?AMD64_NR_ARG_REGS > 0;
-    ?ARG1 -> ?AMD64_NR_ARG_REGS > 1;
-    ?ARG2 -> ?AMD64_NR_ARG_REGS > 2;
-    ?ARG3 -> ?AMD64_NR_ARG_REGS > 3;
-    ?ARG4 -> ?AMD64_NR_ARG_REGS > 4;
-    ?ARG5 -> ?AMD64_NR_ARG_REGS > 5;
-    _ -> false
+  case get(hipe_target_arch) of
+    amd64 ->
+      case R of
+        ?UARG0 -> ?AMD64_NR_ARG_REGS > 0;
+        ?UARG1 -> ?AMD64_NR_ARG_REGS > 1;
+        ?UARG2 -> ?AMD64_NR_ARG_REGS > 2;
+        ?UARG3 -> ?AMD64_NR_ARG_REGS > 3;
+        ?UARG4 -> ?AMD64_NR_ARG_REGS > 4;
+        ?UARG5 -> ?AMD64_NR_ARG_REGS > 5;
+        _ -> false
+      end;
+    amd64_win ->
+      case R of
+        ?WARG0 -> ?AMD64_NR_ARG_REGS > 0;
+        ?WARG1 -> ?AMD64_NR_ARG_REGS > 1;
+        ?WARG2 -> ?AMD64_NR_ARG_REGS > 2;
+        ?WARG3 -> ?AMD64_NR_ARG_REGS > 3;
+        ?WARG4 -> ?AMD64_NR_ARG_REGS > 4;
+        ?WARG5 -> ?AMD64_NR_ARG_REGS > 5;
+        _ -> false
+      end
   end.
 
 args(Arity) when is_integer(Arity), Arity >= 0 ->

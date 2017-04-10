@@ -19,6 +19,7 @@
 #
 # AMD64-specific atoms and bifs
 
+atom amd64_win
 atom amd64
 atom handle_fp_exception
 atom inc_stack_0

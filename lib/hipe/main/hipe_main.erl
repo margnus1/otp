@@ -563,6 +563,8 @@ rtl_to_native(MFA, LinearRTL, Options, DebugState) ->
       x86 ->
 	hipe_x86_main:rtl_to_x86(MFA, LinearRTL, Options);
       amd64 ->
+	hipe_amd64_main:rtl_to_amd64(MFA, LinearRTL, Options);
+      amd64_win ->
 	hipe_amd64_main:rtl_to_amd64(MFA, LinearRTL, Options)
     end,
   ?opt_stop_timer("Native code"),

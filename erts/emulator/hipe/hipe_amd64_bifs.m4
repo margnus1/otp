@@ -31,8 +31,8 @@ include(`hipe/hipe_amd64_asm.m4')
 #define TEST_GOT_EXN	cmpq	$THE_NON_VALUE, %rax
 #endif'
 
-define(TEST_GOT_MBUF,`movq P_MBUF(P), %rdx	/* `TEST_GOT_MBUF' */
-	testq %rdx, %rdx
+define(TEST_GOT_MBUF,`movq P_MBUF(P), C_ARG2	/* `TEST_GOT_MBUF' */
+	testq C_ARG2, C_ARG2
 	jnz 3f	
 2:')
 define(HANDLE_GOT_MBUF,`
@@ -41,7 +41,7 @@ define(HANDLE_GOT_MBUF,`
 
 `#if defined(ERTS_ENABLE_LOCK_CHECK) && defined(ERTS_SMP)
 #  define CALL_BIF(F) \
-		movq CSYM(nbif_impl_##F)@GOTPCREL(%rip), %r11; \
+		leaq CSYM(nbif_impl_##F)(%rip), %r11; \
 		movq %r11, P_BIF_CALLEE(P); \
 		call CSYM(hipe_debug_bif_wrapper)
 #else
@@ -67,16 +67,16 @@ define(standard_bif_interface_1,
 	GLOBAL(ASYM($1))
 ASYM($1):
 	/* set up the parameters */
-	movq	P, %rdi
-	NBIF_ARG(%rsi,1,0)
+	movq	P, C_ARG0
+	NBIF_ARG(_ARG0,1,0)
 
 	/* make the call on the C stack */
 	SWITCH_ERLANG_TO_C
-	pushq	%rsi
-	movq	%rsp, %rsi	/* Eterm* BIF__ARGS */
-	sub	$(8), %rsp	/* stack frame 16-byte alignment */
+	pushq	_ARG0
+	movq	%rsp, C_ARG1		/* Eterm* BIF__ARGS */
+	sub	$(8 + C_SHDW_SPC), %rsp	/* stack frame 16-byte alignment */
 	CALL_BIF($2)
-	add	$(1*8 + 8), %rsp
+	add	$(1*8 + 8 + C_SHDW_SPC), %rsp
 	TEST_GOT_MBUF
 	SWITCH_C_TO_ERLANG
 
@@ -98,17 +98,18 @@ define(standard_bif_interface_2,
 	GLOBAL(ASYM($1))
 ASYM($1):
 	/* set up the parameters */
-	movq	P, %rdi
-	NBIF_ARG(%rsi,2,0)
-	NBIF_ARG(%rdx,2,1)
+	movq	P, C_ARG0
+	NBIF_ARG(_ARG0,2,0)
+	NBIF_ARG(_ARG1,2,1)
 
 	/* make the call on the C stack */
 	SWITCH_ERLANG_TO_C
-	pushq	%rdx
-	pushq 	%rsi
-	movq	%rsp, %rsi	/* Eterm* BIF__ARGS */
+	pushq	_ARG1
+	pushq 	_ARG0
+	movq	%rsp, C_ARG1		/* Eterm* BIF__ARGS */
+        PUSH_SHDW_SPC
 	CALL_BIF($2)
-	add	$(2*8), %rsp
+	add	$(2*8 + C_SHDW_SPC), %rsp
 	TEST_GOT_MBUF
 	SWITCH_C_TO_ERLANG
 
@@ -130,20 +131,20 @@ define(standard_bif_interface_3,
 	GLOBAL(ASYM($1))
 ASYM($1):
 	/* set up the parameters */
-	movq	P, %rdi
-	NBIF_ARG(%rsi,3,0)
-	NBIF_ARG(%rdx,3,1)
-	NBIF_ARG(%rcx,3,2)
+	movq	P, C_ARG0
+	NBIF_ARG(_ARG0,3,0)
+	NBIF_ARG(_ARG1,3,1)
+	NBIF_ARG(_ARG2,3,2)
 
 	/* make the call on the C stack */
 	SWITCH_ERLANG_TO_C
-	pushq 	%rcx
-	pushq	%rdx
-	pushq	%rsi
-	movq	%rsp, %rsi	/* Eterm* BIF__ARGS */
-	sub	$(8), %rsp	/* stack frame 16-byte alignment */  
+	pushq 	_ARG2
+	pushq	_ARG1
+	pushq	_ARG0
+	movq	%rsp, C_ARG1		/* Eterm* BIF__ARGS */
+	sub	$(8 + C_SHDW_SPC), %rsp	/* stack frame 16-byte alignment */
 	CALL_BIF($2)
-	add	$(3*8 + 8), %rsp
+	add	$(3*8 + 8 + C_SHDW_SPC), %rsp
 	TEST_GOT_MBUF
 	SWITCH_C_TO_ERLANG
 
@@ -165,21 +166,22 @@ define(standard_bif_interface_4,
 	GLOBAL(ASYM($1))
 ASYM($1):
 	/* set up the parameters */
-	movq	P, %rdi
-	NBIF_ARG(%rsi,4,0)
-	NBIF_ARG(%rdx,4,1)
-	NBIF_ARG(%rcx,4,2)
-	NBIF_ARG(%r8,4,3)
+	movq	P, C_ARG0
+	NBIF_ARG(_ARG0,4,0)
+	NBIF_ARG(_ARG1,4,1)
+	NBIF_ARG(_ARG2,4,2)
+	NBIF_ARG(_ARG3,4,3)
 
 	/* make the call on the C stack */
 	SWITCH_ERLANG_TO_C
-	pushq	%r8
-	pushq	%rcx
-	pushq	%rdx
-	pushq	%rsi
-	movq	%rsp, %rsi	/* Eterm* BIF__ARGS */
+	pushq	_ARG3
+	pushq	_ARG2
+	pushq	_ARG1
+	pushq	_ARG0
+	movq	%rsp, C_ARG1	/* Eterm* BIF__ARGS */
+	PUSH_SHDW_SPC
 	CALL_BIF($2)
-	add	$(4*8), %rsp
+	add	$(4*8 + C_SHDW_SPC), %rsp
 	TEST_GOT_MBUF
 	SWITCH_C_TO_ERLANG
 
@@ -201,7 +203,7 @@ define(standard_bif_interface_0,
 	GLOBAL(ASYM($1))
 ASYM($1):
 	/* set up the parameters */
-	movq	P, %rdi
+	movq	P, C_ARG0
 
 	/* make the call on the C stack */
 	SWITCH_ERLANG_TO_C
@@ -237,7 +239,7 @@ define(nofail_primop_interface_0,
 	GLOBAL(ASYM($1))
 ASYM($1):
 	/* set up the parameters */
-	movq	P, %rdi
+	movq	P, C_ARG0
 
 	/* make the call on the C stack */
 	SWITCH_ERLANG_TO_C
@@ -261,8 +263,8 @@ define(nofail_primop_interface_1,
 	GLOBAL(ASYM($1))
 ASYM($1):
 	/* set up the parameters */
-	movq	P, %rdi
-	NBIF_ARG(%rsi,1,0)
+	movq	P, C_ARG0
+	NBIF_ARG(C_ARG1,1,0)
 
 	/* make the call on the C stack */
 	SWITCH_ERLANG_TO_C
@@ -286,9 +288,9 @@ define(nofail_primop_interface_2,
 	GLOBAL(ASYM($1))
 ASYM($1):
 	/* set up the parameters */
-	movq	P, %rdi
-	NBIF_ARG(%rsi,2,0)
-	NBIF_ARG(%rdx,2,1)
+	movq	P, C_ARG0
+	NBIF_ARG(C_ARG1,2,0)
+	NBIF_ARG(C_ARG2,2,1)
 
 	/* make the call on the C stack */
 	SWITCH_ERLANG_TO_C
@@ -312,10 +314,10 @@ define(nofail_primop_interface_3,
 	GLOBAL(ASYM($1))
 ASYM($1):
 	/* set up the parameters */
-	movq	P, %rdi
-	NBIF_ARG(%rsi,3,0)
-	NBIF_ARG(%rdx,3,1)
-	NBIF_ARG(%rcx,3,2)
+	movq	P, C_ARG0
+	NBIF_ARG(C_ARG1,3,0)
+	NBIF_ARG(C_ARG2,3,1)
+	NBIF_ARG(C_ARG3,3,2)
 
 	/* make the call on the C stack */
 	SWITCH_ERLANG_TO_C
@@ -350,7 +352,7 @@ define(nocons_nofail_primop_interface_0,
 	GLOBAL(ASYM($1))
 ASYM($1):
 	/* set up the parameters */
-	movq	P, %rdi
+	movq	P, C_ARG0
 
 	/* make the call on the C stack */
 	SWITCH_ERLANG_TO_C_QUICK
@@ -372,8 +374,8 @@ define(nocons_nofail_primop_interface_1,
 	GLOBAL(ASYM($1))
 ASYM($1):
 	/* set up the parameters */
-	movq	P, %rdi
-	NBIF_ARG(%rsi,1,0)
+	movq	P, C_ARG0
+	NBIF_ARG(C_ARG1,1,0)
 
 	/* make the call on the C stack */
 	SWITCH_ERLANG_TO_C_QUICK
@@ -395,9 +397,9 @@ define(nocons_nofail_primop_interface_2,
 	GLOBAL(ASYM($1))
 ASYM($1):
 	/* set up the parameters */
-	movq	P, %rdi
-	NBIF_ARG(%rsi,2,0)
-	NBIF_ARG(%rdx,2,1)
+	movq	P, C_ARG0
+	NBIF_ARG(C_ARG1,2,0)
+	NBIF_ARG(C_ARG2,2,1)
 
 	/* make the call on the C stack */
 	SWITCH_ERLANG_TO_C_QUICK
@@ -419,10 +421,10 @@ define(nocons_nofail_primop_interface_3,
 	GLOBAL(ASYM($1))
 ASYM($1):
 	/* set up the parameters */
-	movq	P, %rdi
-	NBIF_ARG(%rsi,3,0)
-	NBIF_ARG(%rdx,3,1)
-	NBIF_ARG(%rcx,3,2)
+	movq	P, C_ARG0
+	NBIF_ARG(C_ARG1,3,0)
+	NBIF_ARG(C_ARG2,3,1)
+	NBIF_ARG(C_ARG3,3,2)
 
 	/* make the call on the C stack */
 	SWITCH_ERLANG_TO_C_QUICK
@@ -444,15 +446,18 @@ define(nocons_nofail_primop_interface_5,
 	GLOBAL(ASYM($1))
 ASYM($1):
 	/* set up the parameters */
-	movq	P, %rdi
-	NBIF_ARG(%rsi,5,0)
-	NBIF_ARG(%rdx,5,1)
-	NBIF_ARG(%rcx,5,2)
-	NBIF_ARG(%r8,5,3)
-	NBIF_ARG(%r9,5,4)
+	movq	P, C_ARG0
+	NBIF_ARG(C_ARG1,5,0)
+	NBIF_ARG(C_ARG2,5,1)
+	NBIF_ARG(C_ARG3,5,2)
+	/* SIC on the numbers; _ARG3 == "C_ARG4" */
+	NBIF_ARG(_ARG3,5,3)
+	NBIF_ARG(_ARG4,5,4)
 
 	/* make the call on the C stack */
 	SWITCH_ERLANG_TO_C_QUICK
+	PUT_C_ARG4(_ARG3)
+	PUT_C_ARG5(_ARG4)
 	call	CSYM($2)
 	SWITCH_C_TO_ERLANG_QUICK
 
@@ -501,7 +506,7 @@ define(noproc_primop_interface_1,
 	GLOBAL(ASYM($1))
 ASYM($1):
 	/* set up the parameters */
-	NBIF_ARG(%rdi,1,0)
+	NBIF_ARG(C_ARG0,1,0)
 
 	/* make the call on the C stack */
 	SWITCH_ERLANG_TO_C_QUICK
@@ -523,8 +528,8 @@ define(noproc_primop_interface_2,
 	GLOBAL(ASYM($1))
 ASYM($1):
 	/* set up the parameters */
-	NBIF_ARG(%rdi,2,0)
-	NBIF_ARG(%rsi,2,1)
+	NBIF_ARG(C_ARG0,2,0)
+	NBIF_ARG(C_ARG1,2,1)
 
 	/* make the call on the C stack */
 	SWITCH_ERLANG_TO_C_QUICK
@@ -546,9 +551,9 @@ define(noproc_primop_interface_3,
 	GLOBAL(ASYM($1))
 ASYM($1):
 	/* set up the parameters */
-	NBIF_ARG(%rdi,3,0)
-	NBIF_ARG(%rsi,3,1)
-	NBIF_ARG(%rdx,3,2)
+	NBIF_ARG(C_ARG0,3,0)
+	NBIF_ARG(C_ARG1,3,1)
+	NBIF_ARG(C_ARG2,3,2)
 
 	/* make the call on the C stack */
 	SWITCH_ERLANG_TO_C_QUICK
@@ -570,14 +575,15 @@ define(noproc_primop_interface_5,
 	GLOBAL(ASYM($1))
 ASYM($1):
 	/* set up the parameters */
-	NBIF_ARG(%rdi,5,0)
-	NBIF_ARG(%rsi,5,1)
-	NBIF_ARG(%rdx,5,2)
-	NBIF_ARG(%rcx,5,3)
-	NBIF_ARG(%r8,5,4)
+	NBIF_ARG(C_ARG0,5,0)
+	NBIF_ARG(C_ARG1,5,1)
+	NBIF_ARG(C_ARG2,5,2)
+	NBIF_ARG(C_ARG3,5,3)
+	NBIF_ARG(_ARG3,5,4)
 
 	/* make the call on the C stack */
 	SWITCH_ERLANG_TO_C_QUICK
+	PUT_C_ARG4(_ARG3)
 	call	CSYM($2)
 	SWITCH_C_TO_ERLANG_QUICK
 

@@ -938,6 +938,8 @@ assemble(CompiledCode, Closures, Exports, Options) ->
           hipe_x86_assemble:assemble(CompiledCode, Closures, Exports, Options);
         amd64 ->
           hipe_amd64_assemble:assemble(CompiledCode, Closures, Exports, Options);
+        amd64_win ->
+          hipe_amd64_assemble:assemble(CompiledCode, Closures, Exports, Options);
         Arch ->
           ?EXIT({executing_on_an_unsupported_architecture, Arch})
       end;
@@ -1443,6 +1445,8 @@ o1_opts(TargetArch) ->
       [x87 | Common];        % XXX: Temporary until x86 has sse2
     amd64 ->
       Common;
+    amd64_win ->
+      Common -- [inline_fp]; % FPE not working yet
     Arch ->
       ?EXIT({executing_on_an_unsupported_architecture,Arch})
   end.
@@ -1452,7 +1456,7 @@ o2_opts(TargetArch) ->
 	    ra_range_split, range_split_weights, % XXX: Having defaults here is ugly
 	    rtl_lcm | (o1_opts(TargetArch) -- [rtl_ssapre, ra_restore_reuse])],
   case TargetArch of
-    T when T =:= amd64 orelse T =:= ppc64 -> % 64-bit targets
+    T when T =:= amd64; T =:= amd64_win; T =:= ppc64 -> % 64-bit targets
       [icode_range | Common];
     _ ->      % T \in [arm, powerpc, ultrasparc, x86]
       Common  % [rtl_ssapre | Common];

@@ -173,25 +173,78 @@ define(NSP,%rsp)dnl
 	SWITCH_ERLANG_TO_C_QUICK'
 
 /*
+ * ABI-specifics
+ */
+
+ifelse(OPSYS,win32,``
+#define C_ARG0  %rcx
+#define C_ARG1  %rdx
+#define C_ARG2  %r8
+#define C_ARG2l %r8d
+#define C_ARG3  %r9
+#define C_ARG3l %r9d
+#define C_ARGS45_SPC 16
+#define C_SHDW_SPC   32 /* Space for the 4 arg regs */
+'
+define(PUT_C_ARG4,`movq $1, 0x20(%rsp)')dnl
+define(PUT_C_ARG5,`movq $1, 0x28(%rsp)')dnl
+define(PUSH_SHDW_SPC,`subq $C_SHDW_SPC, %rsp')dnl
+define(POP_SHDW_SPC,`addq $C_SHDW_SPC, %rsp')dnl
+define(_ARG0,%rdx)dnl
+define(_ARG1,%r8)dnl
+define(_ARG2,%r9)dnl
+define(_ARG3,%rbx)dnl
+define(_ARG4,%rsi)dnl
+define(_ARG5,%rdi)dnl
+',``
+#define C_ARG0  %rdi
+#define C_ARG1  %rsi
+#define C_ARG2  %rdx
+#define C_ARG2l %edx
+#define C_ARG3  %rcx
+#define C_ARG3l %ecx
+#define C_ARGS45_SPC 0
+#define C_SHDW_SPC   0
+'
+define(PUT_C_ARG4,`NBIF_MOVE_REG($1,%r8)')dnl
+define(PUT_C_ARG5,`NBIF_MOVE_REG($1,%r9)')dnl
+define(PUSH_SHDW_SPC,/* PUSH_SHDW_SPC: nop */)dnl
+define(POP_SHDW_SPC,/* POP_SHDW_SPC: nop */)dnl
+define(_ARG0,%rsi)dnl
+define(_ARG1,%rdx)dnl
+define(_ARG2,%rcx)dnl
+define(_ARG3,%r8)dnl
+define(_ARG4,%r9)dnl
+define(_ARG5,%rdi)dnl
+')
+
+/*
  * Argument (parameter) registers.
  */
+
+`#define _ARG0 '_ARG0
+`#define _ARG1 '_ARG1
+`#define _ARG2 '_ARG2
+`#define _ARG3 '_ARG3
+`#define _ARG4 '_ARG4
+`#define _ARG5 '_ARG5
 
 define(defarg,`define(ARG$1,`$2')dnl
 #`define ARG'$1	$2'
 )dnl
 
 ifelse(eval(NR_ARG_REGS >= 1),0,,
-`defarg(0,`%rsi')')dnl
+`defarg(0,_ARG0)')dnl
 ifelse(eval(NR_ARG_REGS >= 2),0,,
-`defarg(1,`%rdx')')dnl
+`defarg(1,_ARG1)')dnl
 ifelse(eval(NR_ARG_REGS >= 3),0,,
-`defarg(2,`%rcx')')dnl
+`defarg(2,_ARG2)')dnl
 ifelse(eval(NR_ARG_REGS >= 4),0,,
-`defarg(3,`%r8')')dnl
+`defarg(3,_ARG3)')dnl
 ifelse(eval(NR_ARG_REGS >= 5),0,,
-`defarg(4,`%r9')')dnl
+`defarg(4,_ARG4)')dnl
 ifelse(eval(NR_ARG_REGS >= 6),0,,
-`defarg(5,`%rdi')')dnl
+`defarg(5,_ARG5)')dnl
 
 /*
  * TEMP_RV:
@@ -272,21 +325,21 @@ define(NBIF_REG_ARG,`NBIF_MOVE_REG($1,ARG$2)')dnl
 define(NBIF_STK_LOAD,`movq	$2(NSP), $1')dnl
 define(NBIF_STK_ARG,`NBIF_STK_LOAD($1,eval(8*($2-$3)))')dnl
 define(NBIF_ARG,`ifelse(eval($3 >= NR_ARG_REGS),0,`NBIF_REG_ARG($1,$3)',`NBIF_STK_ARG($1,$2,$3)')')dnl
-`/* #define NBIF_ARG_1_0	'NBIF_ARG(%rsi,1,0)` */'
-`/* #define NBIF_ARG_2_0	'NBIF_ARG(%rsi,2,0)` */'
-`/* #define NBIF_ARG_2_1	'NBIF_ARG(%rdx,2,1)` */'
-`/* #define NBIF_ARG_3_0	'NBIF_ARG(%rsi,3,0)` */'
-`/* #define NBIF_ARG_3_1	'NBIF_ARG(%rdx,3,1)` */'
-`/* #define NBIF_ARG_3_2	'NBIF_ARG(%rcx,3,2)` */'
-`/* #define NBIF_ARG_4_0	'NBIF_ARG(%rsi,4,0)` */'
-`/* #define NBIF_ARG_4_1	'NBIF_ARG(%rdx,4,1)` */'
-`/* #define NBIF_ARG_4_2	'NBIF_ARG(%rcx,4,2)` */'
-`/* #define NBIF_ARG_4_3	'NBIF_ARG(%r8,4,3)` */'
-`/* #define NBIF_ARG_5_0	'NBIF_ARG(%rsi,5,0)` */'
-`/* #define NBIF_ARG_5_1	'NBIF_ARG(%rdx,5,1)` */'
-`/* #define NBIF_ARG_5_2	'NBIF_ARG(%rcx,5,2)` */'
-`/* #define NBIF_ARG_5_3	'NBIF_ARG(%r8,5,3)` */'
-`/* #define NBIF_ARG_5_4	'NBIF_ARG(%r9,5,4)` */'
+`/* #define NBIF_ARG_1_0	'NBIF_ARG(_ARG0,1,0)` */'
+`/* #define NBIF_ARG_2_0	'NBIF_ARG(_ARG0,2,0)` */'
+`/* #define NBIF_ARG_2_1	'NBIF_ARG(_ARG1,2,1)` */'
+`/* #define NBIF_ARG_3_0	'NBIF_ARG(_ARG0,3,0)` */'
+`/* #define NBIF_ARG_3_1	'NBIF_ARG(_ARG1,3,1)` */'
+`/* #define NBIF_ARG_3_2	'NBIF_ARG(_ARG2,3,2)` */'
+`/* #define NBIF_ARG_4_0	'NBIF_ARG(_ARG0,4,0)` */'
+`/* #define NBIF_ARG_4_1	'NBIF_ARG(_ARG1,4,1)` */'
+`/* #define NBIF_ARG_4_2	'NBIF_ARG(_ARG2,4,2)` */'
+`/* #define NBIF_ARG_4_3	'NBIF_ARG(_ARG3,4,3)` */'
+`/* #define NBIF_ARG_5_0	'NBIF_ARG(_ARG0,5,0)` */'
+`/* #define NBIF_ARG_5_1	'NBIF_ARG(_ARG1,5,1)` */'
+`/* #define NBIF_ARG_5_2	'NBIF_ARG(_ARG2,5,2)` */'
+`/* #define NBIF_ARG_5_3	'NBIF_ARG(_ARG3,5,3)` */'
+`/* #define NBIF_ARG_5_4	'NBIF_ARG(_ARG4,5,4)` */'
 
 dnl XXX: For >6 arity C BIFs, we need:
 dnl	NBIF_COPY_NSP(ARITY)

@@ -89,6 +89,8 @@ first_virtual_reg() ->
     x86 ->
       hipe_x86_registers:first_virtual();
     amd64 ->
+      hipe_amd64_registers:first_virtual();
+    amd64_win ->
       hipe_amd64_registers:first_virtual()
   end.
 
@@ -105,6 +107,8 @@ heap_pointer() ->	% {GetHPInsn, HPReg, PutHPInsn}
     x86 ->
       x86_heap_pointer();
     amd64 ->
+      amd64_heap_pointer();
+    amd64_win ->
       amd64_heap_pointer()
   end.
 
@@ -150,6 +154,8 @@ heap_limit() ->	% {GetHLIMITInsn, HLIMITReg}
     x86 ->
       heap_limit_from_reg(hipe_x86_registers:heap_limit());
     amd64 ->
+      heap_limit_from_reg(hipe_amd64_registers:heap_limit());
+    amd64_win ->
       heap_limit_from_reg(hipe_amd64_registers:heap_limit())
   end.
 
@@ -174,6 +180,8 @@ fcalls() ->	% {GetFCallsInsn, FCallsReg, PutFCallsInsn}
     x86 ->
       fcalls_from_reg(hipe_x86_registers:fcalls());
     amd64 ->
+      fcalls_from_reg(hipe_amd64_registers:fcalls());
+    amd64_win ->
       fcalls_from_reg(hipe_amd64_registers:fcalls())
   end.
 
@@ -199,6 +207,8 @@ reg_name(Reg) ->
     x86 ->
       hipe_x86_registers:reg_name(Reg);
     amd64 ->
+      hipe_amd64_registers:reg_name(Reg);
+    amd64_win ->
       hipe_amd64_registers:reg_name(Reg)
   end.
 
@@ -228,6 +238,8 @@ is_precolored_regnum(RegNum) ->
     x86 ->
       hipe_x86_registers:is_precoloured(RegNum);
     amd64 ->
+      hipe_amd64_registers:is_precoloured(RegNum);
+    amd64_win ->
       hipe_amd64_registers:is_precoloured(RegNum)
   end.
 
@@ -262,6 +274,9 @@ live_at_return() ->
 			 || {R,_} <- hipe_x86_registers:live_at_return()]);
     amd64 ->
       ordsets:from_list([hipe_rtl:mk_reg(R)
+			 || {R,_} <- hipe_amd64_registers:live_at_return()]);
+    amd64_win ->
+      ordsets:from_list([hipe_rtl:mk_reg(R)
 			 || {R,_} <- hipe_amd64_registers:live_at_return()])
   end.
 
@@ -276,16 +291,19 @@ word_size() ->
     ppc64      -> 8;
     arm	       -> 4;
     x86        -> 4;
-    amd64      -> 8
+    amd64      -> 8;
+    amd64_win  -> 8
   end.
 
 %% alignment() ->
 %%   case get(hipe_target_arch) of
 %%     ultrasparc -> 4;
 %%     powerpc    -> 4;
+%%     ppc64      -> 8;
 %%     arm	  -> 4;
 %%     x86        -> 4;
-%%     amd64      -> 8
+%%     amd64      -> 8;
+%%     amd64_win  -> 8
 %%   end.
 
 %% @spec log2_word_size() -> integer()
@@ -299,7 +317,8 @@ log2_word_size() ->
     ppc64      -> 3;
     arm	       -> 2;
     x86        -> 2;
-    amd64      -> 3
+    amd64      -> 3;
+    amd64_win  -> 3
   end.
 
 %% @spec endianess() -> big | little
@@ -313,6 +332,7 @@ endianess() ->
     ppc64      -> big;
     x86        -> little;
     amd64      -> little;
+    amd64_win  -> little;
     arm        -> ?ARM_ENDIANESS
   end.
 
@@ -479,6 +499,8 @@ store_4(Base, Offset, Src) ->
     ultrasparc ->
       store_big_4_in_pieces(Base, Offset, Src);
     amd64 ->
+      store_4_directly(Base, Offset, Src);
+    amd64_win ->
       store_4_directly(Base, Offset, Src)
   end.
 
@@ -563,6 +585,7 @@ fwait_real() ->
   case get(hipe_target_arch) of
     x86 -> [hipe_rtl:mk_call([], 'fwait', [], [], [], not_remote)];
     amd64 -> [hipe_rtl:mk_call([], 'fwait', [], [], [], not_remote)];
+    amd64_win -> [hipe_rtl:mk_call([], 'fwait', [], [], [], not_remote)];
     arm -> [];
     powerpc -> [];
     ppc64 -> [];
@@ -588,6 +611,11 @@ handle_real_fp_exception() ->
 			hipe_rtl:label_name(ContLbl), [], not_remote),
        ContLbl];
     amd64 ->
+      ContLbl = hipe_rtl:mk_new_label(),
+      [hipe_rtl:mk_call([], handle_fp_exception, [],
+			hipe_rtl:label_name(ContLbl), [], not_remote),
+       ContLbl];
+    amd64_win ->
       ContLbl = hipe_rtl:mk_new_label(),
       [hipe_rtl:mk_call([], handle_fp_exception, [],
 			hipe_rtl:label_name(ContLbl), [], not_remote),
@@ -633,6 +661,8 @@ proc_pointer() ->	% must not be exported
     x86 ->
       hipe_rtl:mk_reg_gcsafe(hipe_x86_registers:proc_pointer());
     amd64 ->
+      hipe_rtl:mk_reg_gcsafe(hipe_amd64_registers:proc_pointer());
+    amd64_win ->
       hipe_rtl:mk_reg_gcsafe(hipe_amd64_registers:proc_pointer())
   end.
 
@@ -660,6 +690,8 @@ nr_of_return_regs() ->
     x86 ->
       hipe_x86_registers:nr_rets();
     amd64 ->
+      1;
+    amd64_win ->
       1
     %% hipe_amd64_registers:nr_rets();
   end.

@@ -40,18 +40,40 @@
  * and six registers are to be saved, so a seventh word is
  * added to make the resulting %rsp 16-byte aligned.
  */
-#define ENTER_FROM_C		\
-	/* save C callee-save registers on the C stack */ \
-	subq	$(7*8), %rsp;	\
-	movq	%r15, 40(%rsp);	\
-	movq	%r14, 32(%rsp);	\
-	movq	%r13, 24(%rsp);	\
-	movq	%r12, 16(%rsp);	\
-	movq	%rbx, 8(%rsp);	\
-	movq	%rbp, (%rsp);	\
-	/* get the process pointer */	\
-	movq	%rdi, P;	\
-	/* switch to native stack */	\
+
+/*
+ * On Windows, the stack frame is 8 words larger
+ * Two words on the high end to store the extra callee saves %rsi & %rdi.
+ * Six words on the low end to make room for a call to C with 6 arguments; two
+ * on stack and 4 in registers but with shadow space on stack.
+ */
+
+#ifdef __WIN32__
+#  define PUSH_EXTRA_WIN32_CALLEE_SAVES	\
+	pushq	%rsi;			\
+	pushq	%rdi
+#  define POP_EXTRA_WIN32_CALLEE_SAVES	\
+	popq	%rdi;			\
+	popq	%rsi
+#else
+#  define PUSH_EXTRA_WIN32_CALLEE_SAVES
+#  define POP_EXTRA_WIN32_CALLEE_SAVES
+#endif
+
+#define ENTER_FROM_C						\
+	/* save C callee-save registers on the C stack */	\
+	PUSH_EXTRA_WIN32_CALLEE_SAVES;				\
+	pushq	%r15;						\
+	pushq	%r14;						\
+	pushq	%r13;						\
+	pushq	%r12;						\
+	pushq	%rbx;						\
+	pushq	%rbp;						\
+	/* 16-byte align stack; allocate shadow space */	\
+	subq	$(8 + C_SHDW_SPC + C_ARGS45_SPC), %rsp;		\
+	/* get the process pointer */				\
+	movq	C_ARG0, P;					\
+	/* switch to native stack */				\
 	SWITCH_C_TO_ERLANG
 
 	TEXT
@@ -96,13 +118,14 @@ ASYM(nbif_return):
 	SWITCH_ERLANG_TO_C_QUICK
 	SET_GC_SAFE
 	/* restore C callee-save registers, drop frame, return */
-	movq	(%rsp), %rbp	# kills P
-	movq	8(%rsp), %rbx
-	movq	16(%rsp), %r12
-	movq	24(%rsp), %r13
-	movq	32(%rsp), %r14
-	movq	40(%rsp), %r15	# kills HP
-	addq	$(7*8), %rsp
+	addq	$(8 + C_SHDW_SPC + C_ARGS45_SPC), %rsp
+	popq	%rbp	# kills P
+	popq	%rbx
+	popq	%r12
+	popq	%r13
+	popq	%r14
+	popq	%r15	# kills HP
+	POP_EXTRA_WIN32_CALLEE_SAVES
 	ret
 
 /*
@@ -223,12 +246,10 @@ ASYM(nbif_ccallemu1):
 	.align	4
 	GLOBAL(ASYM(nbif_ccallemu0))
 ASYM(nbif_ccallemu0):
-	/* We use %rsi not ARG0 here because ARG0 is not
-	   defined when NR_ARG_REGS == 0. */
 #if NR_ARG_REGS == 0
-	movq	8(NSP), %rsi
+	movq	8(NSP), _ARG0
 #endif
-	movq	%rsi, P_CLOSURE(P)
+	movq	_ARG0, P_CLOSURE(P)
 	movl	$HIPE_MODE_SWITCH_RES_CALL_CLOSURE, %eax
 	jmp	.suspend_exit
 
@@ -347,15 +368,14 @@ nbif_4_gc_after_bif:
 	.align	4
 .gc_after_bif:
 	movl	%edx, P_NARITY(P)	# Note: narity is a 32-bit field
-	subq	$(16-8), %rsp
-	movq	P, %rdi
-	movq	%rax, %rsi
-	xorl	%edx, %edx		# Pass NULL in regs
-	xorl	%ecx, %ecx		# Pass 0 in arity
+	movq	P, C_ARG0
+	movq	%rax, C_ARG1
+	xorl	C_ARG2l, C_ARG2l	# Pass NULL in regs
+	xorl	C_ARG3l, C_ARG3l	# Pass 0 in arity
+	popq	TEMP_RV			# RA; align stack, free shadow space
 	call	CSYM(erts_gc_after_bif_call)
-	addq	$(16-8), %rsp
 	movl	$0, P_NARITY(P)		# Note: narity is a 32-bit field
-	ret
+	jmpq    *TEMP_RV
 
 /*
  * We end up here when a BIF called from native signals an
@@ -400,7 +420,7 @@ nbif_4_simple_exception:
 	/* find and prepare to invoke the handler */
 	SWITCH_ERLANG_TO_C_QUICK	# The cached state is clean and need not be saved.
 	SET_GC_SAFE
-	movq	P, %rdi
+	movq	P, C_ARG0
 	call	CSYM(hipe_handle_exception)	# Note: hipe_handle_exception() conses
 	SWITCH_C_TO_ERLANG		# %rsp updated by hipe_find_handler()
 	/* now invoke the handler */
@@ -427,7 +447,7 @@ ASYM(nbif_stack_trap_ra):			# a return address, not a function
 	# If we have more, we need to save them in the PCB.
 	movq	%rax, TEMP_RV		# save retval
 	SWITCH_ERLANG_TO_C_QUICK
-	movq	P, %rdi
+	movq	P, C_ARG0
 	call	CSYM(hipe_handle_stack_trap)	# must not cons; preserves TEMP_RV
 	movq	%rax, %rdx		# original RA
 	SWITCH_C_TO_ERLANG_QUICK
@@ -442,7 +462,7 @@ ASYM(nbif_stack_trap_ra):			# a return address, not a function
 ASYM(nbif_inc_stack_0):
 	SWITCH_ERLANG_TO_C_QUICK
 	STORE_ARG_REGS
-	movq	P, %rdi
+	movq	P, C_ARG0
 	# hipe_inc_nstack reads and writes NSP and NSP_LIMIT,
 	# but does not access HP or FCALLS (or the non-amd64 NRA).
 	call	CSYM(hipe_inc_nstack)

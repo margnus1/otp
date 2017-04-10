@@ -74,6 +74,7 @@
 -define(HARM_TAG,"HARM").
 -define(HX86_TAG,"HX86").
 -define(HA64_TAG,"HA64").
+-define(HW64_TAG,"HW64").
 
 %%========================================================================
 
@@ -85,6 +86,7 @@
 chunk_name(Architecture) ->
   case Architecture of
     amd64 ->      ?HA64_TAG; %% HiPE, x86_64, (implicit: 64-bit, Unix)
+    amd64_win ->  ?HW64_TAG; %% HiPE, x86_64, Windows
     arm ->	  ?HARM_TAG; %% HiPE, arm, v5 (implicit: 32-bit, Linux)
     powerpc ->    ?HPPC_TAG; %% HiPE, PowerPC (implicit: 32-bit, Linux)
     ppc64 ->	  ?HP64_TAG; %% HiPE, ppc64 (implicit: 64-bit, Linux)
@@ -97,6 +99,7 @@ chunk_name(Architecture) ->
 word_size(Architecture) ->
   case Architecture of
     amd64 -> 8;
+    amd64_win -> 8;
     ppc64 -> 8;
     _ -> 4
   end.
@@ -274,6 +277,7 @@ needs_trampolines(Architecture) ->
     arm -> true;
     powerpc -> true;
     ppc64 -> true;
+    amd64_win -> true;
     _ -> false
   end.
 
