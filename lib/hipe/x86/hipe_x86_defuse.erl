@@ -54,6 +54,8 @@ insn_def(I) ->
     #pseudo_spill_fmove{temp=Temp, dst=Dst} -> [Temp, Dst];
     #pseudo_spill_move{temp=Temp, dst=Dst} -> [Temp, Dst];
     #pseudo_tailcall_prepare{} -> tailcall_clobbered();
+    #push{} -> push_pop_clobbered();
+    #pop{dst=Dst} -> addtemp(Dst, push_pop_clobbered());
     #shift{dst=Dst} -> dst_def(Dst);
     %% call, cmp, comment, jcc, jmp_fun, jmp_label, jmp_switch, label
     %% pseudo_jcc, pseudo_tailcall, push, ret, test
@@ -84,6 +86,10 @@ call_clobbered() ->
 tailcall_clobbered() ->
   [hipe_x86:mk_temp(R, T)
    || {R,T} <- ?HIPE_X86_REGISTERS:tailcall_clobbered()].
+
+push_pop_clobbered() ->
+  [hipe_x86:mk_temp(?HIPE_X86_REGISTERS:temp0(), tagged)
+  ,hipe_x86:mk_temp(?HIPE_X86_REGISTERS:temp0(), untagged)].
 
 %%%
 %%% insn_use(Insn) -- Return set of temps used by an instruction.

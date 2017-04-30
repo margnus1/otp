@@ -17,6 +17,8 @@
 %%% TODO:
 %%% - Simplify combine_label_maps and mk_data_relocs.
 
+-include("../rtl/hipe_literals.hrl").
+
 -ifdef(HIPE_AMD64).
 -define(HIPE_X86_ASSEMBLE,  hipe_amd64_assemble).
 -define(HIPE_X86_ENCODE,    hipe_amd64_encode).
@@ -48,7 +50,6 @@
 -include("../main/hipe.hrl").
 -include("../x86/hipe_x86.hrl").
 -include("../../kernel/src/hipe_ext_format.hrl").
--include("../rtl/hipe_literals.hrl").
 -include("../misc/hipe_sdi.hrl").
 -undef(ASSERT).
 -define(ASSERT(G), if G -> [] ; true -> exit({assertion_failed,?MODULE,?LINE,??G}) end).
@@ -240,11 +241,9 @@ translate_insn(I, Context, Options) ->
     %% pseudo_tailcall: eliminated before assembly
     %% pseudo_tailcall_prepare: eliminated before assembly
     #pop{} ->
-      Arg = translate_dst(hipe_x86:pop_dst(I)),
-      [{pop, {Arg}, I}];
+      translate_pop(I, Context, Options);
     #push{} ->
-      Arg = translate_src(hipe_x86:push_src(I), Context),
-      [{push, {Arg}, I}];
+      translate_push(I, Context, Options);
     #ret{} ->
       translate_ret(I);
     #shift{} ->
@@ -256,15 +255,58 @@ translate_insn(I, Context, Options) ->
   end.
 
 -ifdef(X86_SIMULATE_NSP).
+sp_temp() -> hipe_x86:mk_temp(?HIPE_X86_REGISTERS:sp(), untagged).
+temp0(Ty) -> hipe_x86:mk_temp(?HIPE_X86_REGISTERS:temp0(), Ty).
+oper_ty(#x86_temp{type=Type}) -> Type;
+oper_ty(#x86_mem{type=Type}) -> Type;
+oper_ty(#x86_imm{}) -> untagged. % XXX: Just guessing
+
+translate_pop(Pop, Context, Options) ->
+  WordSize = ?HIPE_X86_REGISTERS:wordsize(),
+  SPTemp = sp_temp(),
+  Arg = hipe_x86:pop_dst(Pop),
+  ArgTy = oper_ty(Arg),
+  SpAdj = hipe_x86:mk_alu(add, hipe_x86:mk_imm(WordSize), SPTemp),
+  Mem = hipe_x86:mk_mem(SPTemp, hipe_x86:mk_imm(0), ArgTy),
+  Movs =
+    case Arg of
+      #x86_temp{} ->
+	[hipe_x86:mk_move(Mem, Arg)];
+      #x86_mem{} ->
+        Temp0 = temp0(ArgTy),
+        [hipe_x86:mk_move(Mem, Temp0), hipe_x86:mk_move(Temp0, Arg)]
+      end,
+  Is = Movs ++ [SpAdj],
+  lists:flatmap(fun(I) -> translate_insn(I, Context, Options) end, Is).
+
+translate_push(Push, Context, Options) ->
+  WordSize = ?HIPE_X86_REGISTERS:wordsize(),
+  SPTemp = sp_temp(),
+  Arg = hipe_x86:push_src(Push),
+  ArgTy = oper_ty(Arg),
+  SpAdj = hipe_x86:mk_alu(sub, hipe_x86:mk_imm(WordSize), SPTemp),
+  Mem = hipe_x86:mk_mem(SPTemp, hipe_x86:mk_imm(0), ArgTy),
+  {Ld, St} =
+    case Arg of
+      #x86_temp{} -> {[], [hipe_x86:mk_move(Arg, Mem)]};
+      #x86_imm{} ->  {[], [hipe_x86:mk_move(Arg, Mem)]};
+      #x86_mem{} ->
+        Temp0 = temp0(ArgTy),
+        {[hipe_x86:mk_move(Arg, Temp0)], [hipe_x86:mk_move(Temp0, Mem)]}
+    end,
+  %% We load before the sp adjust to keep sp-relative args correct
+  Is = Ld ++ [SpAdj|St],
+  lists:flatmap(fun(I) -> translate_insn(I, Context, Options) end, Is).
+
 -ifdef(HIPE_AMD64).
 translate_call(I) ->
   WordSize = hipe_amd64_registers:wordsize(),
-  RegSP = 2#100, % esp/rsp
-  TempSP = hipe_x86:mk_temp(RegSP, untagged),
+  TempSP = sp_temp(),
   FunOrig = hipe_x86:call_fun(I),
+  RegSP = ?HIPE_X86_REGISTERS:sp(),
   Fun =
     case FunOrig of
-      #x86_mem{base=#x86_temp{reg=4}, off=#x86_imm{value=Off}} ->
+      #x86_mem{base=#x86_temp{reg=RegSP}, off=#x86_imm{value=Off}} ->
 	FunOrig#x86_mem{off=#x86_imm{value=Off+WordSize}};
       _ -> FunOrig
     end,
@@ -302,8 +344,7 @@ translate_call(I) ->
 -else.
 translate_call(I) ->
   WordSize = ?HIPE_X86_REGISTERS:wordsize(),
-  RegSP = 2#100, % esp/rsp
-  TempSP = hipe_x86:mk_temp(RegSP, untagged),
+  TempSP = sp_temp(),
   FunOrig = hipe_x86:call_fun(I),
   Fun =
     case FunOrig of
@@ -331,7 +372,7 @@ translate_call(I) ->
 
 translate_ret(I) ->
   NPOP = hipe_x86:ret_npop(I) + ?HIPE_X86_REGISTERS:wordsize(),
-  RegSP = 2#100, % esp/rsp
+  RegSP = ?HIPE_X86_REGISTERS:sp(),
   TempSP = hipe_x86:mk_temp(RegSP, untagged),
   RegRA = 2#011, % ebx/rbx
   TempRA = hipe_x86:mk_temp(RegRA, untagged),
@@ -353,6 +394,35 @@ translate_ret(I) ->
     #comment{term=ret}}].
 
 -else. % not X86_SIMULATE_NSP
+
+
+translate_src(Src, Context) ->
+  case Src of
+    #x86_imm{} ->
+      translate_imm(Src, Context, true);
+    _ ->
+      translate_dst(Src)
+  end.
+
+translate_dst(Dst) ->
+  case Dst of
+    #x86_temp{} ->
+      temp_to_regArch(Dst);
+    #x86_mem{type='double'} ->
+      mem_to_rm64fp(Dst);
+    #x86_mem{} ->
+      mem_to_rmArch(Dst);
+    #x86_fpreg{} ->
+      fpreg_to_stack(Dst)
+  end.
+
+translate_pop(I, _Context, _Options) ->
+  Arg = translate_dst(hipe_x86:pop_dst(I)),
+  [{pop, {Arg}, I}].
+
+translate_push(I, Context, _Options) ->
+  Arg = translate_src(hipe_x86:push_src(I), Context),
+  [{push, {Arg}, I}].
 
 translate_call(I) ->
   %% call and jmp are patched the same, so no need to distinguish
@@ -407,14 +477,6 @@ translate_fun(Arg, PatchTypeExt) ->
       {rel32,{PatchTypeExt,Prim}}
   end.
 
-translate_src(Src, Context) ->
-  case Src of
-    #x86_imm{} ->
-      translate_imm(Src, Context, true);
-    _ ->
-      translate_dst(Src)
-  end.
-
 %%% MayTrunc8 controls whether negative Imm8s should be truncated
 %%% to 8 bits or not. Truncation should always be done, except when
 %%% the caller will widen the Imm8 to an Imm32 or Imm64.
@@ -446,18 +508,6 @@ translate_imm(#x86_imm{value=Imm}, Context, MayTrunc8) ->
 	    {c_const,Label}
 	end,
       {imm32,{?LOAD_ADDRESS,Val}}
-  end.
-
-translate_dst(Dst) ->
-  case Dst of
-    #x86_temp{} ->
-      temp_to_regArch(Dst);
-    #x86_mem{type='double'} ->
-      mem_to_rm64fp(Dst);
-    #x86_mem{} ->
-      mem_to_rmArch(Dst);
-    #x86_fpreg{} ->
-      fpreg_to_stack(Dst)
   end.
 
 %%%

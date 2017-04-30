@@ -65,7 +65,7 @@
 	 ea_disp8_base/2, ea_disp8_sib/2,
 	 ea_base/1,
 	 ea_disp32_sindex/1, %%ea_disp32_sindex/2,
-	 ea_sib/1, %ea_disp32_rip/1,
+	 ea_sib/1, ea_disp32_rip/1,
 	 rm_reg/1, rm_mem/1,
 	 % instructions
 	 insn_encode/3, insn_sizeof/2]).
@@ -179,7 +179,7 @@ ea_disp32_sindex(Disp32) -> {ea_disp32_sindex, Disp32, none}.
 ea_sib(SIB) ->
     ?ASSERT(ea_sib, SIB#sib.base =/= ?EBP),
     {ea_sib, SIB}.
-%ea_disp32_rip(Disp32) -> {ea_disp32_rip, Disp32}.
+ea_disp32_rip(Disp32) -> {ea_disp32_rip, Disp32}.
 
 rm_reg(Reg) -> {rm_reg, Reg}.
 rm_mem(EA) -> {rm_mem, EA}.

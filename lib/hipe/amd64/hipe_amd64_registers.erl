@@ -103,6 +103,7 @@ heap_limit_offset() -> ?P_HP_LIMIT.
 
 -define(SSE2_TEMP0, 00).
 
+-define(STACK_POINTER, ?R12).
 -define(PROC_POINTER, ?RBP).
 
 reg_name(R) ->
@@ -156,7 +157,7 @@ rax() -> ?RAX.
 rcx() -> ?RCX.
 temp0() -> ?TEMP0.
 temp1() -> ?TEMP1.
-sp() -> ?RSP.
+sp() -> ?STACK_POINTER.
 proc_pointer() -> ?PROC_POINTER.
 fcalls() -> ?FCALLS.
 heap_limit() -> ?HEAP_LIMIT.
@@ -187,6 +188,7 @@ is_fixed(?RSP) -> true;
 is_fixed(?PROC_POINTER) -> true;
 is_fixed(?FCALLS) -> true;
 is_fixed(?HEAP_LIMIT) -> true;
+is_fixed(?STACK_POINTER) -> true;
 is_fixed(R) -> is_heap_pointer(R).
 
 %% fixed() ->
@@ -195,7 +197,7 @@ is_fixed(R) -> is_heap_pointer(R).
 allocatable() ->
   [?RDX, ?RCX, ?RBX, ?RAX, ?RSI, ?RDI,
    ?R8 , ?R9 , ?R10, ?R11, ?R12, ?R13, ?R14, ?R15]
-    -- [?FCALLS, ?HEAP_POINTER, ?HEAP_LIMIT].
+    -- [?FCALLS, ?HEAP_POINTER, ?HEAP_LIMIT, ?STACK_POINTER].
 
 allocatable_sse2() ->
   [00,01,02,03,04,05,06,07,08,09,10,11,12,13,14,15]. %% xmm0 - xmm15
@@ -260,6 +262,7 @@ call_clobbered() ->
     [{?FCALLS,tagged},{?FCALLS,untagged},
      {?HEAP_POINTER,tagged},{?HEAP_POINTER,untagged},
      {?HEAP_LIMIT,tagged},{?HEAP_LIMIT,untagged}
+    ,{?STACK_POINTER,tagged},{?STACK_POINTER,untagged}
     ].
 
 fp_call_clobbered() -> %% sse2 since it has more registers than x87
@@ -275,6 +278,7 @@ live_at_return() ->
      ,{?PROC_POINTER,untagged}
      ,{?FCALLS,untagged}
      ,{?HEAP_LIMIT,untagged}
+     ,{?STACK_POINTER, untagged}
      | ?LIST_HP_LIVE_AT_RETURN
     ].
 

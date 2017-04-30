@@ -31,7 +31,7 @@ define(NR_ARG_REGS,4)dnl admissible values are 0 to 6, inclusive
 define(HP_IN_REGISTER,1)dnl 1 to reserve a global register for HP
 define(FCALLS_IN_REGISTER,0)dnl 1 to reserve global register for FCALLS
 define(HEAP_LIMIT_IN_REGISTER,0)dnl global for HL
-define(SIMULATE_NSP,0)dnl change to 1 to simulate call/ret insns
+define(SIMULATE_NSP,1)dnl change to 1 to simulate call/ret insns
 
 `#define AMD64_LEAF_WORDS	'LEAF_WORDS
 `#define LEAF_WORDS		'LEAF_WORDS
@@ -114,7 +114,7 @@ ifelse(OPSYS,darwin,``
 #define RESTORE_HEAP_LIMIT	/*empty*/
 #endif'
 
-define(NSP,%rsp)dnl
+define(NSP,%r12)dnl
 `#define NSP		'NSP
 `#define SAVE_CSP	movq	%rsp, P_CSP(P)
 #define RESTORE_CSP	movq	P_CSP(P), %rsp'
