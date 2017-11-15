@@ -153,7 +153,12 @@ static void patch_trampoline(char *trampoline, void *destAddress)
  */
 static void *alloc_code(unsigned int alloc_bytes)
 {
+#ifdef __WIN32__
+    return VirtualAlloc(NULL, alloc_bytes, MEM_RESERVE|MEM_COMMIT,
+                        PAGE_EXECUTE_READWRITE);
+#else
     return erts_alloc(ERTS_ALC_T_HIPE_EXEC, alloc_bytes);
+#endif
 }
 
 void *hipe_alloc_code(Uint nrbytes, Eterm callees, Eterm *trampolines, Process *p)
@@ -182,7 +187,11 @@ void *hipe_alloc_code(Uint nrbytes, Eterm callees, Eterm *trampolines, Process *
 
 void hipe_free_code(void* code, unsigned int bytes)
 {
+#ifdef __WIN32__
+    VirtualFree(code, 0, MEM_RELEASE);
+#else
     erts_free(ERTS_ALC_T_HIPE_EXEC, code);
+#endif
 }
 
 /* Make stub for native code calling exported beam function.
@@ -313,7 +322,11 @@ void *hipe_make_native_stub(void *callee_exp, unsigned int beamArity)
 
 void hipe_free_native_stub(void* stub)
 {
+#ifdef __WIN32__
+    VirtualFree(stub, 0, MEM_RELEASE);
+#else
     erts_free(ERTS_ALC_T_HIPE_EXEC, stub);
+#endif
 }
 
 void hipe_arch_print_pcb(struct hipe_process_state *p)

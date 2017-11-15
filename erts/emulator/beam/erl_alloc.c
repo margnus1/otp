@@ -379,7 +379,7 @@ set_default_exec_alloc_opts(struct au_init *ip)
     ip->init.util.mseg_realloc  = &erts_alcu_mmapper_mseg_realloc;
     ip->init.util.mseg_dealloc  = &erts_alcu_mmapper_mseg_dealloc;
     ip->init.util.mseg_mmapper  = &erts_exec_mmapper;
-# else
+# elif HAVE_ERTS_MSEG
     ip->init.util.mseg_alloc    = &erts_alcu_exec_mseg_alloc;
     ip->init.util.mseg_realloc  = &erts_alcu_exec_mseg_realloc;
     ip->init.util.mseg_dealloc  = &erts_alcu_exec_mseg_dealloc;
