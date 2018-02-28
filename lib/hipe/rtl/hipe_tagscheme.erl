@@ -696,12 +696,12 @@ unsafe_update_element(Tuple, Index, Value) ->   % Index is an immediate
 element(Dst, Index, Tuple, FailLabName, {tuple, A}, IndexInfo) ->
   FixnumOkLab = hipe_rtl:mk_new_label(),
   IndexOkLab = hipe_rtl:mk_new_label(),
-  UIndex = hipe_rtl:mk_new_reg_gcsafe(),
   Arity = hipe_rtl:mk_imm(A),
   case IndexInfo of
     valid ->
       %% This is no branch, 1 load and 3 alus = 4 instr
       Offset = hipe_rtl:mk_new_reg_gcsafe(),
+      UIndex = hipe_rtl:mk_new_reg_gcsafe(),
       Ptr = hipe_rtl:mk_new_reg(), % offset from Tuple
       [untag_fixnum(UIndex, Index),
        untag_ptr_nooffset(Ptr, Tuple, ?TAG_PRIMARY_BOXED),
@@ -710,41 +710,37 @@ element(Dst, Index, Tuple, FailLabName, {tuple, A}, IndexInfo) ->
        hipe_rtl:mk_load(Dst, Ptr, Offset)];
     fixnums ->
       %% This is 1 branch, 1 load and 4 alus = 6 instr
-      [untag_fixnum(UIndex, Index),
-       gen_element_tail(Dst, Tuple, Arity, UIndex, FailLabName, IndexOkLab)];
+      gen_element_tail(Dst, Tuple, Arity, Index, FailLabName, IndexOkLab);
     _ ->
       %% This is 3 branches, 1 load and 5 alus = 9 instr
       [test_fixnum(Index, hipe_rtl:label_name(FixnumOkLab),
 		   FailLabName, 0.99),
        FixnumOkLab,
-       untag_fixnum(UIndex, Index),
-       gen_element_tail(Dst, Tuple, Arity, UIndex, FailLabName, IndexOkLab)]
+       gen_element_tail(Dst, Tuple, Arity, Index, FailLabName, IndexOkLab)]
   end;
 element(Dst, Index, Tuple, FailLabName, tuple, IndexInfo) ->
   FixnumOkLab = hipe_rtl:mk_new_label(),
   IndexOkLab = hipe_rtl:mk_new_label(),
   Header = hipe_rtl:mk_new_reg_gcsafe(),
-  UIndex = hipe_rtl:mk_new_reg_gcsafe(),
   Arity = hipe_rtl:mk_new_reg_gcsafe(),
   case IndexInfo of
     fixnums ->
       %% This is 1 branch, 2 loads and 5 alus = 8 instr
       [get_header(Header, Tuple),
-       untag_fixnum(UIndex, Index),
        hipe_rtl:mk_alu(Arity,Header,'srl',hipe_rtl:mk_imm(?HEADER_ARITY_OFFS))|
-       gen_element_tail(Dst, Tuple, Arity, UIndex, FailLabName, IndexOkLab)];
+       gen_element_tail(Dst, Tuple, Arity, Index, FailLabName, IndexOkLab)];
     Num when is_integer(Num) ->
-      %% This is 1 branch, 1 load and 3 alus = 5 instr
-      gen_element_tail(Dst, Tuple, hipe_rtl:mk_imm(Num), UIndex, FailLabName,
-		       IndexOkLab);
+      [get_header(Header, Tuple),
+       hipe_rtl:mk_alu(Arity,Header,'srl',hipe_rtl:mk_imm(?HEADER_ARITY_OFFS))|
+       gen_element_tail(Dst, Tuple, Arity,hipe_rtl:mk_imm(mk_fixnum(Num)),
+                       FailLabName, IndexOkLab)];
     _ ->
       %% This is 2 branches, 2 loads and 6 alus = 10 instr
       [test_fixnum(Index, hipe_rtl:label_name(FixnumOkLab), FailLabName, 0.99),
        FixnumOkLab,
        get_header(Header, Tuple),
-       untag_fixnum(UIndex, Index),
        hipe_rtl:mk_alu(Arity,Header,'srl',hipe_rtl:mk_imm(?HEADER_ARITY_OFFS))|
-       gen_element_tail(Dst, Tuple, Arity, UIndex, FailLabName, IndexOkLab)]
+       gen_element_tail(Dst, Tuple, Arity, Index, FailLabName, IndexOkLab)]
   end;
 element(Dst, Index, Tuple, FailLabName, unknown, IndexInfo) ->
   FixnumOkLab = hipe_rtl:mk_new_label(),
@@ -752,7 +748,6 @@ element(Dst, Index, Tuple, FailLabName, unknown, IndexInfo) ->
   TupleOkLab = hipe_rtl:mk_new_label(),
   IndexOkLab = hipe_rtl:mk_new_label(),
   Header = hipe_rtl:mk_new_reg_gcsafe(),
-  UIndex = hipe_rtl:mk_new_reg_gcsafe(),
   Arity = hipe_rtl:mk_new_reg_gcsafe(),
   case IndexInfo of
     fixnums ->
@@ -765,10 +760,9 @@ element(Dst, Index, Tuple, FailLabName, unknown, IndexInfo) ->
 			  hipe_rtl:mk_imm(?TAG_HEADER_MASK), 'eq',
 			  hipe_rtl:label_name(TupleOkLab), FailLabName, 0.99),
        TupleOkLab,
-       untag_fixnum(UIndex, Index),
        hipe_rtl:mk_alu(Arity, Header, 'srl',
 		       hipe_rtl:mk_imm(?HEADER_ARITY_OFFS))|
-       gen_element_tail(Dst, Tuple, Arity, UIndex, FailLabName, IndexOkLab)];
+       gen_element_tail(Dst, Tuple, Arity, Index, FailLabName, IndexOkLab)];
     Num when is_integer(Num) ->
       %% This is 3 branches, 2 loads and 4 alus = 9 instr
       [test_is_boxed(Tuple, hipe_rtl:label_name(BoxedOkLab),
@@ -781,8 +775,8 @@ element(Dst, Index, Tuple, FailLabName, unknown, IndexInfo) ->
        TupleOkLab,
        hipe_rtl:mk_alu(Arity, Header, 'srl', 
 		       hipe_rtl:mk_imm(?HEADER_ARITY_OFFS))|
-       gen_element_tail(Dst, Tuple, Arity, hipe_rtl:mk_imm(Num), FailLabName,
-			IndexOkLab)];
+       gen_element_tail(Dst, Tuple, Arity, hipe_rtl:mk_imm(mk_fixnum(Num)),
+                        FailLabName, IndexOkLab)];
     _ ->
       %% This is 4 branches, 2 loads, and 6 alus = 12 instr :(
       [test_fixnum(Index, hipe_rtl:label_name(FixnumOkLab),
@@ -796,25 +790,37 @@ element(Dst, Index, Tuple, FailLabName, unknown, IndexInfo) ->
 			  hipe_rtl:mk_imm(?TAG_HEADER_MASK), 'eq',
 			  hipe_rtl:label_name(TupleOkLab), FailLabName, 0.99),
        TupleOkLab,
-       untag_fixnum(UIndex, Index),
        hipe_rtl:mk_alu(Arity, Header, 'srl',
 		       hipe_rtl:mk_imm(?HEADER_ARITY_OFFS))|
-       gen_element_tail(Dst, Tuple, Arity, UIndex, FailLabName, IndexOkLab)]
+       gen_element_tail(Dst, Tuple, Arity, Index, FailLabName, IndexOkLab)]
   end.
 
-gen_element_tail(Dst, Tuple, Arity, UIndex, FailLabName, IndexOkLab) ->
+gen_element_tail(Dst, Tuple, Arity, Index, FailLabName, IndexOkLab) ->
+  WordSize = hipe_rtl_arch:word_size(),
   ZeroIndex = hipe_rtl:mk_new_reg_gcsafe(),
   Offset = hipe_rtl:mk_new_reg_gcsafe(),
   Ptr = hipe_rtl:mk_new_reg(), % offset from Tuple
+  {PtrBase, UntagOffset, UntagPtr} = untag_ptr(Tuple, ?TAG_PRIMARY_BOXED),
   %% now check that 1 <= UIndex <= Arity
   %% by checking the equivalent (except for when Arity>=2^(WordSize-1))
   %% (UIndex - 1) <u Arity
-  [hipe_rtl:mk_alu(ZeroIndex, UIndex, 'sub', hipe_rtl:mk_imm(1)),
+  %%
+  %% The subtraction is performed before the untag, which lets us generate
+  %% better x86/amd64 code (using a LEA combined move/subtract). This introduces
+  %% an edge case where the value wraps around; however we do not need to check
+  %% for this condition due to the resulting value (2^28-1 on 32-bit, 2^60-1 on
+  %% 64-bit) is larger than the maximum tuple size (2^26-1), and will thus fail
+  %% the bounds check below anyway
+  [hipe_rtl:mk_alu(ZeroIndex, Index, 'sub',
+                   hipe_rtl:mk_imm(1 bsl ?TAG_IMMED1_SIZE)),
+   untag_fixnum(ZeroIndex, ZeroIndex),
    hipe_rtl:mk_branch(ZeroIndex, 'geu', Arity, FailLabName,
 		      hipe_rtl:label_name(IndexOkLab), 0.01),
    IndexOkLab,
-   untag_ptr_nooffset(Ptr, Tuple, ?TAG_PRIMARY_BOXED),
-   hipe_rtl:mk_alu(Offset, UIndex, 'sll',
+   UntagPtr,
+   hipe_rtl:mk_alu(Ptr, PtrBase, 'add',
+                   hipe_rtl:mk_imm(UntagOffset + WordSize)),
+   hipe_rtl:mk_alu(Offset, ZeroIndex, 'sll',
                    hipe_rtl:mk_imm(hipe_rtl_arch:log2_word_size())),
    hipe_rtl:mk_load(Dst, Ptr, Offset)].
 
